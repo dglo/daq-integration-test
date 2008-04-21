@@ -5,8 +5,7 @@ import icecube.daq.payload.SourceIdRegistry;
 import icecube.util.Poolable;
 
 public class MockSourceID
-    extends Poolable
-    implements ISourceID
+    implements ISourceID, Poolable
 {
     private int id;
 
