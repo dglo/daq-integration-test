@@ -8,6 +8,7 @@ import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.DAQComponentIOProcess;
+import icecube.daq.io.FileDispatcher;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
@@ -88,7 +89,9 @@ public class EventBuilderEndToEndTest
                 !msg.startsWith("Resetting counter ") &&
                 !msg.startsWith("No match for timegate ") &&
                 !msg.startsWith("Sending empty event for window") &&
-                !msg.endsWith("does not exist!  Using current directory."))
+                !msg.endsWith("does not exist!  Using current directory.") &&
+                !msg.equals("Cannot write to " +
+                            FileDispatcher.DISPATCH_DEST_STORAGE + "!"))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
             }
