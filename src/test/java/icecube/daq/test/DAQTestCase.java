@@ -145,6 +145,42 @@ public abstract class DAQTestCase
         }
     }
 
+    void destroyComponentIO(EBComponent ebComp,
+                            GlobalTriggerComponent gtComp,
+                            IcetopTriggerComponent itComp,
+                            IniceTriggerComponent iiComp,
+                            AmandaTriggerComponent amComp,
+                            StringHubComponent[] shComps)
+    {
+        if (ebComp != null) {
+            ebComp.getTriggerReader().destroyProcessor();
+            ebComp.getRequestWriter().destroyProcessor();
+            ebComp.getDataReader().destroyProcessor();
+        }
+        if (gtComp != null) {
+            gtComp.getReader().destroyProcessor();
+            gtComp.getWriter().destroyProcessor();
+        }
+        if (itComp != null) {
+            itComp.getReader().destroyProcessor();
+            itComp.getWriter().destroyProcessor();
+        }
+        if (iiComp != null) {
+            iiComp.getReader().destroyProcessor();
+            iiComp.getWriter().destroyProcessor();
+        }
+        if (amComp != null) {
+            amComp.getReader().destroyProcessor();
+            amComp.getWriter().destroyProcessor();
+        }
+
+        for (int i = 0; i < shComps.length; i++) {
+            shComps[i].getHitWriter().destroyProcessor();
+            shComps[i].getRequestReader().destroyProcessor();
+            shComps[i].getDataWriter().destroyProcessor();
+        }
+    }
+
     abstract int getNumberOfAmandaTriggerSent();
 
     abstract void initialize()
@@ -368,6 +404,8 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
     {
         super.setUp();
 
+        DAQTestUtil.clearCachedChannels();
+
         appender.clear();
 
         BasicConfigurator.resetConfiguration();
@@ -424,6 +462,8 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
     protected void tearDown()
         throws Exception
     {
+        DAQTestUtil.logOpenChannels();
+
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
@@ -632,5 +672,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
 
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();
+
+        destroyComponentIO(ebComp, gtComp, itComp, iiComp, amComp, shComps);
     }
 }
