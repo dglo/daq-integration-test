@@ -379,6 +379,48 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         appender.setVerbose(val);
     }
 
+    void startComponentIO(Selector sel, EBComponent ebComp,
+                          GlobalTriggerComponent gtComp,
+                          IcetopTriggerComponent itComp,
+                          IniceTriggerComponent iiComp,
+                          AmandaTriggerComponent amComp,
+                          StringHubComponent[] shComps)
+        throws IOException
+    {
+        if (ebComp != null) {
+            DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
+            DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
+            DAQTestUtil.startIOProcess(ebComp.getDataReader());
+        }
+        if (gtComp != null) {
+            DAQTestUtil.startIOProcess(gtComp.getReader());
+            DAQTestUtil.startIOProcess(gtComp.getWriter());
+        }
+        if (itComp != null) {
+            DAQTestUtil.startIOProcess(itComp.getReader());
+            DAQTestUtil.startIOProcess(itComp.getWriter());
+        }
+        if (iiComp != null) {
+            DAQTestUtil.startIOProcess(iiComp.getReader());
+            DAQTestUtil.startIOProcess(iiComp.getWriter());
+        }
+        if (amComp != null) {
+            DAQTestUtil.startIOProcess(amComp.getReader());
+            DAQTestUtil.startIOProcess(amComp.getWriter());
+
+            WritableByteChannel amTail = ServerUtil.acceptChannel(sel);
+
+            initializeAmandaInput(amTail);
+        }
+
+        for (int i = 0; i < shComps.length; i++) {
+            shComps[i].getSender().reset();
+            DAQTestUtil.startIOProcess(shComps[i].getHitWriter());
+            DAQTestUtil.startIOProcess(shComps[i].getRequestReader());
+            DAQTestUtil.startIOProcess(shComps[i].getDataWriter());
+        }
+    }
+
     protected void tearDown()
         throws Exception
     {
@@ -501,34 +543,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         // finish setup
         connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
-        DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
-        DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
-        DAQTestUtil.startIOProcess(ebComp.getDataReader());
-        DAQTestUtil.startIOProcess(gtComp.getReader());
-        DAQTestUtil.startIOProcess(gtComp.getWriter());
-        if (itComp != null) {
-            DAQTestUtil.startIOProcess(itComp.getReader());
-            DAQTestUtil.startIOProcess(itComp.getWriter());
-        }
-        if (iiComp != null) {
-            DAQTestUtil.startIOProcess(iiComp.getReader());
-            DAQTestUtil.startIOProcess(iiComp.getWriter());
-        }
-        if (amComp != null) {
-            DAQTestUtil.startIOProcess(amComp.getReader());
-            DAQTestUtil.startIOProcess(amComp.getWriter());
-
-            WritableByteChannel amTail = ServerUtil.acceptChannel(sel);
-
-            initializeAmandaInput(amTail);
-        }
-
-        for (int i = 0; i < shComps.length; i++) {
-            shComps[i].getSender().reset();
-            DAQTestUtil.startIOProcess(shComps[i].getHitWriter());
-            DAQTestUtil.startIOProcess(shComps[i].getRequestReader());
-            DAQTestUtil.startIOProcess(shComps[i].getDataWriter());
-        }
+        startComponentIO(sel, ebComp, gtComp, itComp, iiComp, amComp, shComps);
 
         // start sending input data
         sendData(shComps);
