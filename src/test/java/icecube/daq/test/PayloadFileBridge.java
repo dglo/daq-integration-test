@@ -62,6 +62,12 @@ public class PayloadFileBridge
         chanOut = null;
     }
 
+    boolean isStopMessage(ByteBuffer buf)
+    {
+        return buf.limit() == STOP_MESSAGE_LENGTH &&
+            buf.getInt(0) == STOP_MESSAGE_LENGTH;
+    }
+
     void write(ByteBuffer buf)
         throws IOException
     {

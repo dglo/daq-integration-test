@@ -42,10 +42,13 @@ public abstract class PayloadConsumer
         return thread != null;
     }
 
+    abstract boolean isStopMessage(ByteBuffer buf);
+
     public void run()
     {
         ByteBuffer lenBuf = ByteBuffer.allocate(4);
 
+        boolean sendStop = true;
         while (true) {
             lenBuf.rewind();
             int numBytes;
@@ -97,6 +100,11 @@ public abstract class PayloadConsumer
             // don't overwhelm other threads
             Thread.yield();
 
+            if (isStopMessage(buf)) {
+                sendStop = false;
+                break;
+            }
+
             numWritten++;
         }
 
@@ -106,13 +114,15 @@ public abstract class PayloadConsumer
             // ignore errors on close
         }
 
-        ByteBuffer buf = buildStopMessage(null);
-        if (buf != null) {
-            try {
-                write(buf);
-            } catch (IOException ioe) {
-                throw new Error("Couldn't write " + inputName + " stop message",
-                                ioe);
+        if (sendStop) {
+            ByteBuffer buf = buildStopMessage(null);
+            if (buf != null) {
+                try {
+                    write(buf);
+                } catch (IOException ioe) {
+                    throw new Error("Couldn't write " + inputName +
+                                    " stop message", ioe);
+                }
             }
         }
 

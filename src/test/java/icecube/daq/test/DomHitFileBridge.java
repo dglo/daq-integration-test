@@ -49,6 +49,13 @@ public class DomHitFileBridge
         return stopBuf;
     }
 
+    boolean isStopMessage(ByteBuffer buf)
+    {
+        return buf.limit() == STOP_MESSAGE_LENGTH &&
+            buf.getInt(0) == STOP_MESSAGE_LENGTH &&
+            buf.getLong(24) == Long.MAX_VALUE;
+    }
+
     void finishThreadCleanup()
     {
     }
