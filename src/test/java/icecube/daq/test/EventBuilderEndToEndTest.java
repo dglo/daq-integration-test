@@ -91,7 +91,11 @@ public class EventBuilderEndToEndTest
                 !msg.startsWith("Sending empty event for window") &&
                 !msg.endsWith("does not exist!  Using current directory.") &&
                 !msg.equals("Cannot write to " +
-                            FileDispatcher.DISPATCH_DEST_STORAGE + "!"))
+                            FileDispatcher.DISPATCH_DEST_STORAGE + "!") &&
+                !msg.startsWith("Couldn't move temp file ") &&
+                !msg.equals("The last temp-physics file was not moved" +
+                            " to the dispatch storage!!!") &&
+                !msg.startsWith("Couldn't stop dispatcher ("))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
             }
