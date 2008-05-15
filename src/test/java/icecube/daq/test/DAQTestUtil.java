@@ -17,8 +17,53 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 
 import junit.framework.Assert;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+class ChannelData
+{
+    private static final Log LOG = LogFactory.getLog(ChannelData.class);
+
+    private String name;
+    private java.nio.channels.Channel chan;
+    private Error stack;
+
+    ChannelData(String name, java.nio.channels.Channel chan)
+    {
+        this.name = name;
+        this.chan = chan;
+
+        try {
+            throw new Error("StackTrace");
+        } catch (Error err) {
+            stack = err;
+        }
+    }
+
+    void logOpen()
+    {
+        if (chan.isOpen()) {
+            LOG.error(toString() + " has not been closed");
+        }
+    }
+
+    public String toString()
+    {
+        StringBuilder buf = new StringBuilder("Channel[");
+        buf.append(name).append('/').append(chan.toString());
+
+        if (stack != null) {
+            buf.append("/ opened at ");
+            buf.append(stack.getStackTrace()[1].toString());
+        }
+
+        return buf.append(']').toString();
+    }
+}
 
 public final class DAQTestUtil
     extends Assert
@@ -27,6 +72,9 @@ public final class DAQTestUtil
     private static final int SLEEP_TIME = 100;
 
     private static ByteBuffer stopMsg;
+
+    public static ArrayList<ChannelData> chanData =
+        new ArrayList<ChannelData>();
 
     public static final File buildConfigFile(String rsrcDirName,
                                              String trigConfigName)
@@ -62,6 +110,18 @@ public final class DAQTestUtil
         return tempFile;
     }
 
+    public static final void clearCachedChannels()
+    {
+        chanData.clear();
+    }
+
+    public static final void logOpenChannels()
+    {
+        for (ChannelData cd : chanData) {
+            cd.logOpen();
+        }
+    }
+
     public static PayloadSink connectToSink(String name,
                                             DAQComponentOutputProcess out,
                                             IByteBufferCache outCache,
@@ -74,9 +134,11 @@ public final class DAQTestUtil
         Pipe outPipe = Pipe.open();
 
         Pipe.SinkChannel sinkOut = outPipe.sink();
+        chanData.add(new ChannelData(name, sinkOut));
         sinkOut.configureBlocking(false);
 
         Pipe.SourceChannel srcOut = outPipe.source();
+        chanData.add(new ChannelData(name, srcOut));
         srcOut.configureBlocking(true);
 
         out.addDataChannel(sinkOut, outCache);
@@ -134,9 +196,11 @@ public final class DAQTestUtil
         Pipe testPipe = Pipe.open();
 
         WritableByteChannel sinkChannel = testPipe.sink();
+        chanData.add(new ChannelData("rdrSink", sinkChannel));
         testPipe.sink().configureBlocking(true);
 
         Pipe.SourceChannel sourceChannel = testPipe.source();
+        chanData.add(new ChannelData("rdrSrc", sourceChannel));
         sourceChannel.configureBlocking(false);
 
         rdr.addDataChannel(sourceChannel, cache, 1024);
@@ -182,9 +246,11 @@ public final class DAQTestUtil
         Pipe outPipe = Pipe.open();
 
         Pipe.SinkChannel sinkOut = outPipe.sink();
+        chanData.add(new ChannelData(name + "*OUT", sinkOut));
         sinkOut.configureBlocking(false);
 
         Pipe.SourceChannel srcOut = outPipe.source();
+        chanData.add(new ChannelData(name + "*OUT", srcOut));
         srcOut.configureBlocking(true);
 
         out.addDataChannel(sinkOut, outCache);
@@ -196,9 +262,11 @@ public final class DAQTestUtil
         Pipe inPipe = Pipe.open();
 
         Pipe.SinkChannel sinkIn = inPipe.sink();
+        chanData.add(new ChannelData(name + "*IN", sinkIn));
         sinkIn.configureBlocking(true);
 
         Pipe.SourceChannel srcIn = inPipe.source();
+        chanData.add(new ChannelData(name + "*IN", srcIn));
         srcIn.configureBlocking(false);
 
         in.addDataChannel(srcIn, inCache, 1024);
