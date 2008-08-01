@@ -2237,7 +2237,7 @@ public class WorldTest
         PayloadValidator validator = new TriggerValidator();
 
         // set up event builder
-        EBComponent ebComp = new EBComponent();
+        EBComponent ebComp = new EBComponent(true);
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));

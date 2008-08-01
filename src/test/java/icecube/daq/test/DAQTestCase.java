@@ -503,7 +503,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         MockDispatcher disp = new MockDispatcher();
 
         // set up event builder
-        EBComponent ebComp = new EBComponent();
+        EBComponent ebComp = new EBComponent(true);
         ebComp.start(false);
         ebComp.setDispatcher(disp);
         ebComp.setRunNumber(RUN_NUMBER);

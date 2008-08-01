@@ -244,7 +244,7 @@ public class EventBuilderEndToEndTest
     {
         List<HitData> hitList = getHitList();
 
-        EBComponent comp = new EBComponent();
+        EBComponent comp = new EBComponent(true);
         comp.start(false);
         comp.setRunNumber(RUN_NUMBER);
         comp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
