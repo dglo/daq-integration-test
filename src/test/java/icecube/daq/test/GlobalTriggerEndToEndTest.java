@@ -127,7 +127,8 @@ public class GlobalTriggerEndToEndTest
             if (!(msg.startsWith("Clearing ") &&
                   msg.endsWith(" rope entries")) &&
                 !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate "))
+                !msg.startsWith("No match for timegate ") &&
+                !msg.contains("I3 GlobalTrigger Run Summary"))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
             }
