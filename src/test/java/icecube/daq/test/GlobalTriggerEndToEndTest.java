@@ -65,8 +65,6 @@ public class GlobalTriggerEndToEndTest
     private static final MockAppender appender =
         new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
 
-    private static ByteBuffer hitBuf;
-
     public GlobalTriggerEndToEndTest(String name)
     {
         super(name);
