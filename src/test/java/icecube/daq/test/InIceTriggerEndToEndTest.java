@@ -163,8 +163,9 @@ public class InIceTriggerEndToEndTest
             DAQTestUtil.connectToReader(comp.getReader(), comp.getCache(),
                                         numTails);
 
+        InIceValidator validator = new InIceValidator();
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(), comp.getCache(),
-                                  new InIceValidator());
+                                  validator);
 
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());
@@ -183,6 +184,8 @@ public class InIceTriggerEndToEndTest
                      numObjs / NUM_HITS_PER_TRIGGER,
                      comp.getPayloadsSent() - 1);
 
+        assertFalse("Found invalid payload(s)", validator.foundInvalid());
+
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
         } else {
@@ -198,6 +201,8 @@ public class InIceTriggerEndToEndTest
     class InIceValidator
         extends BaseValidator
     {
+        private Log LOG = LogFactory.getLog(InIceValidator.class);
+
         private long timeSpan;
 
         private boolean jumpHack = true;
@@ -213,11 +218,11 @@ public class InIceTriggerEndToEndTest
             nextEnd = nextStart + timeSpan;
         }
 
-        public void validate(IWriteablePayload payload)
+        public boolean validate(IWriteablePayload payload)
         {
             if (!(payload instanceof ITriggerRequestPayload)) {
-                throw new Error("Unexpected payload " +
-                                payload.getClass().getName());
+                LOG.error("Unexpected payload " + payload.getClass().getName());
+                return false;
             }
 
             //dumpPayloadBytes(payload);
@@ -225,18 +230,21 @@ public class InIceTriggerEndToEndTest
             ITriggerRequestPayload tr = (ITriggerRequestPayload) payload;
 
             if (!PayloadChecker.validateTriggerRequest(tr, true)) {
-                throw new Error("Trigger request is not valid");
+                LOG.error("Trigger request is not valid");
+                return false;
             }
 
             long firstTime = getUTC(tr.getFirstTimeUTC());
             long lastTime = getUTC(tr.getLastTimeUTC());
 
             if (firstTime != nextStart) {
-                throw new Error("Expected first trigger time " + nextStart +
-                                ", not " + firstTime);
+                LOG.error("Expected first trigger time " + nextStart +
+                          ", not " + firstTime);
+                return false;
             } else if (lastTime != nextEnd) {
-                throw new Error("Expected last trigger time " + nextEnd +
-                                ", not " + lastTime);
+                LOG.error("Expected last trigger time " + nextEnd +
+                          ", not " + lastTime);
+                return false;
             }
 
             nextStart = firstTime + TIME_BASE + timeSpan;
@@ -245,6 +253,8 @@ public class InIceTriggerEndToEndTest
                 jumpHack = false;
             }
             nextEnd = lastTime + TIME_BASE + timeSpan;
+
+            return true;
         }
     }
 }

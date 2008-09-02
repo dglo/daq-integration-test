@@ -32,12 +32,16 @@ import java.nio.channels.Pipe;
 import java.nio.channels.Selector;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.log4j.BasicConfigurator;
 
@@ -2192,7 +2196,8 @@ public class SubstandardTest
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
 
-        PayloadValidator validator = new TriggerValidator();
+        PayloadValidator trValidator = new TriggerValidator();
+        PayloadValidator gtValidator = new GlobalTriggerValidator();
 
         // set up global trigger
         GlobalTriggerComponent gtComp = new GlobalTriggerComponent();
@@ -2202,7 +2207,7 @@ public class SubstandardTest
         gtComp.configuring(cfgFile.getName());
 
         DAQTestUtil.connectToSink("gtOut", gtComp.getWriter(),
-                                  gtComp.getCache(), validator);
+                                  gtComp.getCache(), gtValidator);
 
         // set up in-ice trigger
         IniceTriggerComponent iiComp = new IniceTriggerComponent();
@@ -2213,7 +2218,7 @@ public class SubstandardTest
 
         DAQTestUtil.glueComponents("IIT->GT",
                                    iiComp.getWriter(), iiComp.getCache(),
-                                   validator,
+                                   trValidator,
                                    gtComp.getReader(), gtComp.getCache());
 
         WritableByteChannel[] iiTails =
@@ -2230,7 +2235,7 @@ public class SubstandardTest
 
         DAQTestUtil.glueComponents("AM->GT",
                                    amComp.getWriter(), amComp.getCache(),
-                                   validator,
+                                   trValidator,
                                    gtComp.getReader(), gtComp.getCache());
 
         // start I/O engines
@@ -2246,16 +2251,26 @@ public class SubstandardTest
         };
 
         // load data into input channels
-        int numAmanda = 0;
-        for (ByteBuffer bb : getAmandaTriggers()) {
-            bb.position(0);
-            amTails[0].write(bb);
-            numAmanda++;
-        }
+        List<ByteBuffer> amList = getAmandaTriggers();
+        List<ByteBuffer> iiList = getInIceHits();
 
-        for (ByteBuffer bb : getInIceHits()) {
-            bb.position(0);
-            iiTails[0].write(bb);
+        final int numAmanda = amList.size();
+
+        for (int i = 0; true; i++) {
+            boolean sentData = false;
+            if (i < amList.size()) {
+                ByteBuffer bb = amList.get(i);
+                bb.position(0);
+                amTails[0].write(bb);
+                sentData = true;
+            }
+            if (i < iiList.size()) {
+                ByteBuffer bb = iiList.get(i);
+                bb.position(0);
+                iiTails[0].write(bb);
+                sentData = true;
+            }
+            if (!sentData) break;
         }
 
         DAQTestUtil.sendStops(amTails);
@@ -2287,6 +2302,10 @@ public class SubstandardTest
                      numAmanda, amComp.getPayloadsSent() - 1);
         assertEquals("Unexpected number of global triggers",
                      509, gtComp.getPayloadsSent() - 1);
+
+        assertFalse("Found invalid global trigger(s)",
+                    gtValidator.foundInvalid());
+        assertFalse("Found invalid trigger(s)", trValidator.foundInvalid());
 
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();

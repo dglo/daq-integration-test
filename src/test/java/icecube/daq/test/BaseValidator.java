@@ -16,6 +16,12 @@ public abstract class BaseValidator
     private static final Log LOG = LogFactory.getLog(BaseValidator.class);
 
     private MasterPayloadFactory factory;
+    private boolean foundInvalid;
+
+    public boolean foundInvalid()
+    {
+        return foundInvalid;
+    }
 
     static long getUTC(IUTCTime time)
     {
@@ -54,11 +60,11 @@ public abstract class BaseValidator
         System.err.println("LEN "+len+" HEX "+strbuf.toString());
     }
 
-    public void validate(ByteBuffer payBuf)
+    public boolean validate(ByteBuffer payBuf)
     {
         // assume stop messages are valid
         if (payBuf.limit() >= 4 && payBuf.getInt(0) == 4) {
-            return;
+            return true;
         }
 
         if (factory == null) {
@@ -70,9 +76,14 @@ public abstract class BaseValidator
             payload = factory.createPayload(0, payBuf, false);
         } catch (Exception ex) {
             LOG.error("Couldn't validate byte buffer", ex);
-            return;
+            foundInvalid = false;
+            return false;
         }
 
-        validate(payload);
+        boolean isValid = validate(payload);
+
+        foundInvalid |= !isValid;
+
+        return isValid;
     }
 }

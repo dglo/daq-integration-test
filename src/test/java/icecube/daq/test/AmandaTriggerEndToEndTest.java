@@ -203,8 +203,10 @@ public class AmandaTriggerEndToEndTest
 
         comp.configuring(cfgFile.getName());
 
+        AmandaValidator validator = new AmandaValidator();
+
         DAQTestUtil.connectToSink("amOut", comp.getWriter(), comp.getCache(),
-                                  new AmandaValidator());
+                                  validator);
 
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());
@@ -226,6 +228,8 @@ public class AmandaTriggerEndToEndTest
         assertEquals("Bad number of payloads written",
                      numObjs, comp.getPayloadsSent());
 
+        assertFalse("Found invalid payload(s)", validator.foundInvalid());
+
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
         } else {
@@ -241,6 +245,8 @@ public class AmandaTriggerEndToEndTest
     class AmandaValidator
         extends BaseValidator
     {
+        private Log LOG = LogFactory.getLog(AmandaValidator.class);
+
         private long nextStart;
         private long nextEnd;
 
@@ -253,11 +259,11 @@ public class AmandaTriggerEndToEndTest
             nextEnd = nextStart;
         }
 
-        public void validate(IWriteablePayload payload)
+        public boolean validate(IWriteablePayload payload)
         {
             if (!(payload instanceof ITriggerRequestPayload)) {
-                throw new Error("Unexpected payload " +
-                                payload.getClass().getName());
+                LOG.error("Unexpected payload " + payload.getClass().getName());
+                return false;
             }
 
             //dumpPayloadBytes(payload);
@@ -265,22 +271,27 @@ public class AmandaTriggerEndToEndTest
             ITriggerRequestPayload tr = (ITriggerRequestPayload) payload;
 
             if (!PayloadChecker.validateTriggerRequest(tr, true)) {
-                throw new Error("Trigger request is not valid");
+                LOG.error("Trigger request " + tr + " is not valid");
+                return false;
             }
 
             long firstTime = getUTC(tr.getFirstTimeUTC());
             long lastTime = getUTC(tr.getLastTimeUTC());
 
             if (firstTime != nextStart) {
-                throw new Error("Expected first trigger time " + nextStart +
-                                ", not " + firstTime);
+                LOG.error("Expected first trigger time " + nextStart +
+                          ", not " + firstTime);
+                return false;
             } else if (lastTime != nextStart) {
-                throw new Error("Expected last trigger time " + nextStart +
-                                ", not " + lastTime);
+                LOG.error("Expected last trigger time " + nextStart +
+                          ", not " + lastTime);
+                return false;
             }
 
             nextStart = firstTime + TIME_STEP;
             nextEnd = nextStart;
+
+            return true;
         }
     }
 }

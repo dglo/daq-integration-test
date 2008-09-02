@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 
 public interface PayloadValidator
 {
-    void validate(ByteBuffer payBuf);
-    void validate(IWriteablePayload payload);
+    boolean foundInvalid();
+    boolean validate(ByteBuffer payBuf);
+    boolean validate(IWriteablePayload payload);
 }
