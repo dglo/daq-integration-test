@@ -135,7 +135,7 @@ public abstract class DAQTestCase
 
         // connect SH data to EB
         PayloadReader dataRdr = ebComp.getDataReader();
-        IByteBufferCache dataCache = new VitreousBufferCache();
+        IByteBufferCache dataCache = new VitreousBufferCache("RdOutData");
         for (int i = 0; i < shComps.length; i++) {
             int hubNum = shComps[i].getHubId() % 100;
             DAQTestUtil.glueComponents("SH#" + hubNum + "->EB",
