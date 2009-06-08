@@ -12,6 +12,7 @@ import icecube.daq.io.FileDispatcher;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayloadDestination;
 import icecube.daq.payload.IPayloadDestinationCollection;
@@ -283,6 +284,26 @@ public class EventBuilderEndToEndTest
         } catch (InterruptedException ie) {
             // ignore interrupts
         }
+
+        IByteBufferCache gtCache =
+            comp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
+        assertTrue("Trigger buffer cache is unbalanced (" + gtCache + ")",
+                   gtCache.isBalanced());
+
+        IByteBufferCache rdCache =
+            comp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+        assertTrue("Readout data buffer cache is unbalanced (" + rdCache + ")",
+                   rdCache.isBalanced());
+
+        IByteBufferCache evtCache =
+            comp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+        assertTrue("Event buffer cache is unbalanced (" + evtCache + ")",
+                   evtCache.isBalanced());
+
+        IByteBufferCache genCache =
+            comp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+        assertTrue("Generic buffer cache is unbalanced (" + genCache + ")",
+                   genCache.isBalanced());
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

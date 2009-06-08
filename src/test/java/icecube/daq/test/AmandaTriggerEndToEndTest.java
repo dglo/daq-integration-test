@@ -3,6 +3,7 @@ package icecube.daq.test;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
@@ -227,6 +228,14 @@ public class AmandaTriggerEndToEndTest
 
         assertEquals("Bad number of payloads written",
                      numObjs, comp.getPayloadsSent());
+
+        IByteBufferCache inCache = comp.getInputCache();
+        assertTrue("Input buffer cache is unbalanced (" + inCache + ")",
+                   inCache.isBalanced());
+
+        IByteBufferCache outCache = comp.getOutputCache();
+        assertTrue("Output buffer cache is unbalanced (" + outCache + ")",
+                   outCache.isBalanced());
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 

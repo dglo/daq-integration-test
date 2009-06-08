@@ -8,6 +8,7 @@ import icecube.daq.io.NormalState;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
@@ -4791,6 +4792,14 @@ public class GlobalTriggerEndToEndTest
 
         assertEquals("Unexpected number of global triggers",
                      565, comp.getPayloadsSent() - 1);
+
+        IByteBufferCache inCache = comp.getInputCache();
+        assertTrue("Input buffer cache is unbalanced (" + inCache + ")",
+                   inCache.isBalanced());
+
+        IByteBufferCache outCache = comp.getOutputCache();
+        assertTrue("Output buffer cache is unbalanced (" + outCache + ")",
+                   outCache.isBalanced());
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

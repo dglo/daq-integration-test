@@ -60,6 +60,65 @@ public abstract class DAQTestCase
     abstract StringHubComponent[] buildStringHubComponents()
         throws DAQCompException, IOException;
 
+    private void checkCaches(EBComponent ebComp,
+                             GlobalTriggerComponent gtComp,
+                             IcetopTriggerComponent itComp,
+                             IniceTriggerComponent iiComp,
+                             AmandaTriggerComponent amComp,
+                             StringHubComponent[] shComps)
+        throws DAQCompException
+    {
+        IByteBufferCache cache;
+
+        cache = ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
+        assertTrue("Trigger buffer cache is unbalanced (" + cache + ")",
+                   cache.isBalanced());
+
+        cache = ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+        assertTrue("Readout data buffer cache is unbalanced (" + cache + ")",
+                   cache.isBalanced());
+
+        cache = ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+        assertTrue("Event buffer cache is unbalanced (" + cache + ")",
+                   cache.isBalanced());
+
+        cache = ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+        assertTrue("Generic buffer cache is unbalanced (" + cache + ")",
+                   cache.isBalanced());
+
+        if (gtComp != null) checkTriggerCaches(gtComp, "Global trigger");
+        if (itComp != null) checkTriggerCaches(itComp, "Icetop trigger");
+        if (iiComp != null) checkTriggerCaches(iiComp, "In-ice trigger");
+        if (amComp != null) checkTriggerCaches(amComp, "Amanda trigger");
+
+        for (int i = 0; i < shComps.length; i++) {
+            cache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+            assertTrue("Readout data buffer cache is unbalanced (" + cache +
+                       ")", cache.isBalanced());
+
+            cache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+            assertTrue("Generic buffer cache is unbalanced (" + cache + ")",
+                       cache.isBalanced());
+
+            cache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
+            assertTrue("MONI buffer cache is unbalanced (" + cache + ")",
+                       cache.isBalanced());
+
+            cache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
+            assertTrue("TCal buffer cache is unbalanced (" + cache + ")",
+                       cache.isBalanced());
+
+            cache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
+            assertTrue("SN buffer cache is unbalanced (" + cache + ")",
+                       cache.isBalanced());
+        }
+    }
+
     private void checkLogMessages()
     {
         for (int i = 0; i < appender.getNumberOfMessages(); i++) {
@@ -76,6 +135,18 @@ public abstract class DAQTestCase
             }
         }
         appender.clear();
+    }
+
+    private void checkTriggerCaches(TriggerComponent comp, String name)
+        throws DAQCompException
+    {
+        IByteBufferCache inCache = comp.getInputCache();
+        assertTrue(name + " input buffer cache is unbalanced (" + inCache + ")",
+                   inCache.isBalanced());
+
+        IByteBufferCache outCache = comp.getOutputCache();
+        assertTrue(name + " output buffer cache is unbalanced (" + outCache +
+                   ")", outCache.isBalanced());
     }
 
     private static void connectHubsAndEB(StringHubComponent[] shComps,
@@ -682,6 +753,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();
 
+        checkCaches(ebComp, gtComp, itComp, iiComp, amComp, shComps);
         destroyComponentIO(ebComp, gtComp, itComp, iiComp, amComp, shComps);
     }
 }
