@@ -6,6 +6,7 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
@@ -135,13 +136,15 @@ public abstract class DAQTestCase
 
         // connect SH data to EB
         PayloadReader dataRdr = ebComp.getDataReader();
-        IByteBufferCache dataCache = new VitreousBufferCache("RdOutData");
         for (int i = 0; i < shComps.length; i++) {
             int hubNum = shComps[i].getHubId() % 100;
+            IByteBufferCache dataCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
             DAQTestUtil.glueComponents("SH#" + hubNum + "->EB",
                                        shComps[i].getDataWriter(), dataCache,
                                        validator,
-                                       ebComp.getDataReader(), dataCache);
+                                       ebComp.getDataReader(),
+                                       ebComp.getDataCache());
         }
     }
 
