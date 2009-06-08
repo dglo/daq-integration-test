@@ -2207,7 +2207,7 @@ public class SubstandardTest
         gtComp.configuring(cfgFile.getName());
 
         DAQTestUtil.connectToSink("gtOut", gtComp.getWriter(),
-                                  gtComp.getCache(), gtValidator);
+                                  gtComp.getOutputCache(), gtValidator);
 
         // set up in-ice trigger
         IniceTriggerComponent iiComp = new IniceTriggerComponent();
@@ -2217,12 +2217,13 @@ public class SubstandardTest
         iiComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("IIT->GT",
-                                   iiComp.getWriter(), iiComp.getCache(),
+                                   iiComp.getWriter(), iiComp.getOutputCache(),
                                    trValidator,
-                                   gtComp.getReader(), gtComp.getCache());
+                                   gtComp.getReader(), gtComp.getInputCache());
 
         WritableByteChannel[] iiTails =
-            DAQTestUtil.connectToReader(iiComp.getReader(), iiComp.getCache(),
+            DAQTestUtil.connectToReader(iiComp.getReader(),
+                                        iiComp.getInputCache(),
                                         1);
 
         // set up amanda trigger
@@ -2234,9 +2235,9 @@ public class SubstandardTest
         amComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("AM->GT",
-                                   amComp.getWriter(), amComp.getCache(),
+                                   amComp.getWriter(), amComp.getOutputCache(),
                                    trValidator,
-                                   gtComp.getReader(), gtComp.getCache());
+                                   gtComp.getReader(), gtComp.getInputCache());
 
         // start I/O engines
         DAQTestUtil.startIOProcess(gtComp.getReader());

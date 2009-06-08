@@ -82,7 +82,7 @@ public abstract class DAQTestCase
                                          TriggerComponent iiComp,
                                          EBComponent ebComp,
                                          PayloadValidator validator)
-        throws IOException
+        throws DAQCompException, IOException
     {
         // connect SH hit to triggers
         for (int n = 0; n < 2; n++) {
@@ -100,7 +100,7 @@ public abstract class DAQTestCase
             }
 
             PayloadReader hitRdr = trigComp.getReader();
-            IByteBufferCache cache = trigComp.getCache();
+            IByteBufferCache cache = trigComp.getInputCache();
 
             for (int i = 0; i < shComps.length; i++) {
                 int srcId = shComps[i].getHubId();
@@ -517,7 +517,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         gtComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("GT->EB",
-                                   gtComp.getWriter(), gtComp.getCache(),
+                                   gtComp.getWriter(), gtComp.getOutputCache(),
                                    validator,
                                    ebComp.getTriggerReader(),
                                    ebComp.getTriggerCache());
@@ -534,9 +534,11 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             itComp.configuring(cfgFile.getName());
 
             DAQTestUtil.glueComponents("ITT->GT",
-                                       itComp.getWriter(), itComp.getCache(),
+                                       itComp.getWriter(),
+                                       itComp.getOutputCache(),
                                        validator,
-                                       gtComp.getReader(), gtComp.getCache());
+                                       gtComp.getReader(),
+                                       gtComp.getInputCache());
         }
 
         // set up in-ice trigger
@@ -551,9 +553,11 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             iiComp.configuring(cfgFile.getName());
 
             DAQTestUtil.glueComponents("IIT->GT",
-                                       iiComp.getWriter(), iiComp.getCache(),
+                                       iiComp.getWriter(),
+                                       iiComp.getOutputCache(),
                                        validator,
-                                       gtComp.getReader(), gtComp.getCache());
+                                       gtComp.getReader(),
+                                       gtComp.getInputCache());
         }
 
         Selector sel;
@@ -575,9 +579,11 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             amComp.configuring(cfgFile.getName());
 
             DAQTestUtil.glueComponents("AM->GT",
-                                       amComp.getWriter(), amComp.getCache(),
+                                       amComp.getWriter(),
+                                       amComp.getOutputCache(),
                                        validator,
-                                       gtComp.getReader(), gtComp.getCache());
+                                       gtComp.getReader(),
+                                       gtComp.getInputCache());
         }
 
         // finish setup

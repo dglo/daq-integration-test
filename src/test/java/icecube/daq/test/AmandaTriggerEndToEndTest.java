@@ -205,8 +205,8 @@ public class AmandaTriggerEndToEndTest
 
         AmandaValidator validator = new AmandaValidator();
 
-        DAQTestUtil.connectToSink("amOut", comp.getWriter(), comp.getCache(),
-                                  validator);
+        DAQTestUtil.connectToSink("amOut", comp.getWriter(),
+                                  comp.getOutputCache(), validator);
 
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());

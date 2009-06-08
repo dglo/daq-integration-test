@@ -160,12 +160,12 @@ public class InIceTriggerEndToEndTest
         comp.configuring(cfgFile.getName());
 
         WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getCache(),
+            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
                                         numTails);
 
         InIceValidator validator = new InIceValidator();
-        DAQTestUtil.connectToSink("iiOut", comp.getWriter(), comp.getCache(),
-                                  validator);
+        DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
+                                  comp.getOutputCache(), validator);
 
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());

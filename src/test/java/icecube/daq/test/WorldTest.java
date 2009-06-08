@@ -2256,7 +2256,7 @@ public class WorldTest
         gtComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("GT->EB",
-                                   gtComp.getWriter(), gtComp.getCache(),
+                                   gtComp.getWriter(), gtComp.getOutputCache(),
                                    validator,
                                    ebComp.getTriggerReader(),
                                    ebComp.getTriggerCache());
@@ -2269,13 +2269,13 @@ public class WorldTest
         iiComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("IIT->GT",
-                                   iiComp.getWriter(), iiComp.getCache(),
+                                   iiComp.getWriter(), iiComp.getOutputCache(),
                                    validator,
-                                   gtComp.getReader(), gtComp.getCache());
+                                   gtComp.getReader(), gtComp.getInputCache());
 
         WritableByteChannel[] iiTails =
-            DAQTestUtil.connectToReader(iiComp.getReader(), iiComp.getCache(),
-                                        idList.size());
+            DAQTestUtil.connectToReader(iiComp.getReader(),
+                                        iiComp.getInputCache(), idList.size());
 
         // set up amanda trigger
         AmandaTriggerComponent amComp =
@@ -2286,9 +2286,9 @@ public class WorldTest
         amComp.configuring(cfgFile.getName());
 
         DAQTestUtil.glueComponents("AM->GT",
-                                   amComp.getWriter(), amComp.getCache(),
+                                   amComp.getWriter(), amComp.getOutputCache(),
                                    validator,
-                                   gtComp.getReader(), gtComp.getCache());
+                                   gtComp.getReader(), gtComp.getInputCache());
 
 
         // finish global trigger setup

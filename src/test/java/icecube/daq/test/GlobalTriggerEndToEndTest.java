@@ -4758,10 +4758,11 @@ public class GlobalTriggerEndToEndTest
         comp.configuring(cfgFile.getName());
 
         WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getCache(),
+            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
                                         numTails);
 
-        DAQTestUtil.connectToSink("gtOut", comp.getWriter(), comp.getCache(),
+        DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
+                                  comp.getOutputCache(),
                                   new TriggerValidator());
 
         DAQTestUtil.startIOProcess(comp.getReader());

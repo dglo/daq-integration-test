@@ -235,13 +235,13 @@ public class GlobalTriggerPhysicsDataTest
         comp.configuring(cfgFile.getName());
 
         WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getCache(),
+            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
                                         numTails);
 
         GlobalTriggerValidator validator = new GlobalTriggerValidator();
 
-        DAQTestUtil.connectToSink("gtOut", comp.getWriter(), comp.getCache(),
-                                  validator);
+        DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
+                                  comp.getOutputCache(), validator);
 
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());
