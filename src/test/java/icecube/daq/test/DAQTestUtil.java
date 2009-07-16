@@ -1,13 +1,22 @@
 package icecube.daq.test;
 
+import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.io.PayloadReader;
+import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.MasterPayloadFactory;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.splicer.Splicer;
+import icecube.daq.stringhub.StringHubComponent;
+import icecube.daq.trigger.component.AmandaTriggerComponent;
+import icecube.daq.trigger.component.IcetopTriggerComponent;
+import icecube.daq.trigger.component.IniceTriggerComponent;
+import icecube.daq.trigger.component.GlobalTriggerComponent;
+import icecube.daq.trigger.component.TriggerComponent;
 import icecube.daq.trigger.impl.TriggerRequestPayloadFactory;
 
 import java.io.File;
@@ -108,6 +117,106 @@ public final class DAQTestUtil
         out.close();
 
         return tempFile;
+    }
+
+    public static void checkCaches(EBComponent ebComp,
+                                   GlobalTriggerComponent gtComp,
+                                   IcetopTriggerComponent itComp,
+                                   IniceTriggerComponent iiComp,
+                                   AmandaTriggerComponent amComp,
+                                   StringHubComponent[] shComps)
+        throws DAQCompException
+    {
+        final boolean debug = false;
+
+        assertEquals("Mismatch between global triggers sent and events sent",
+                     gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
+
+        IByteBufferCache ebGTCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
+        if (debug) System.err.println("EB GTcache " + ebGTCache);
+        assertTrue("EB trigger buffer cache is unbalanced (" + ebGTCache + ")",
+                   ebGTCache.isBalanced());
+
+        IByteBufferCache ebRDCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+        if (debug) System.err.println("EB RDcache " + ebRDCache);
+        assertTrue("EB readout data buffer cache is unbalanced (" + ebRDCache +
+                   ")", ebRDCache.isBalanced());
+
+        IByteBufferCache ebEvtCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+        if (debug) System.err.println("EB EVTcache " + ebEvtCache);
+        assertTrue("EB event buffer cache is unbalanced (" + ebEvtCache + ")",
+                   ebEvtCache.isBalanced());
+
+        IByteBufferCache ebGenCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+        if (debug) System.err.println("EB GENcache " + ebGenCache);
+        assertTrue("EB Generic buffer cache is unbalanced (" + ebGenCache + ")",
+                   ebGenCache.isBalanced());
+
+        if (gtComp != null) checkTriggerCaches(gtComp, "Global trigger", debug);
+        if (itComp != null) checkTriggerCaches(itComp, "Icetop trigger", debug);
+        if (iiComp != null) checkTriggerCaches(iiComp, "In-ice trigger", debug);
+        if (amComp != null) checkTriggerCaches(amComp, "Amanda trigger", debug);
+
+        // triggers are allocated when they're read in
+        // and again when they're copied into the event
+        assertEquals("Mismatch between triggers sent and events sent",
+                     (gtComp.getPayloadsSent() - 1) * 2,
+                     ebGTCache.getTotalBuffersAcquired());
+
+        for (int i = 0; shComps != null && i < shComps.length; i++) {
+            IByteBufferCache shRDCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+            if (debug) System.err.println("SH RDcache " + shRDCache);
+            assertTrue("SH readout data buffer cache is unbalanced (" +
+                       shRDCache + ")", shRDCache.isBalanced());
+
+            IByteBufferCache shGenCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+            if (debug) System.err.println("SH Gencache " + shGenCache);
+            assertTrue("SH generic buffer cache is unbalanced (" +
+                       shGenCache + ")", shGenCache.isBalanced());
+
+            IByteBufferCache shMoniCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
+            if (debug) System.err.println("SH Monicache " + shMoniCache);
+            assertTrue("SH MONI buffer cache is unbalanced (" +
+                       shMoniCache + ")", shMoniCache.isBalanced());
+
+            IByteBufferCache shTCalCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
+            if (debug) System.err.println("SH TCalcache " + shTCalCache);
+            assertTrue("SH TCal buffer cache is unbalanced (" +
+                       shTCalCache + ")", shTCalCache.isBalanced());
+
+            IByteBufferCache shSNCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
+            if (debug) System.err.println("SH SNcache " + shSNCache);
+            assertTrue("SH SN buffer cache is unbalanced (" +
+                       shSNCache + ")", shSNCache.isBalanced());
+        }
+    }
+
+    private static void checkTriggerCaches(TriggerComponent comp, String name,
+                                           boolean debug)
+        throws DAQCompException
+    {
+        IByteBufferCache inCache = comp.getInputCache();
+        if (debug) System.err.println(name+" INcache " + inCache);
+        assertTrue(name + " input buffer cache is unbalanced (" + inCache + ")",
+                   inCache.isBalanced());
+
+        IByteBufferCache outCache = comp.getOutputCache();
+        if (debug) System.err.println(name+" OUTcache " + outCache);
+        assertTrue(name + " output buffer cache is unbalanced (" + outCache +
+                   ")", outCache.isBalanced());
+
+        assertEquals(name + " mismatch between triggers allocated and sent",
+                     outCache.getTotalBuffersAcquired(),
+                     comp.getPayloadsSent() - 1);
     }
 
     public static final void clearCachedChannels()
