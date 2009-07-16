@@ -77,9 +77,9 @@ public class MockDispatcher
         return numSeen;
     }
 
-    public void setDispatchDestStorage(String s0)
+    public void setDispatchDestStorage(String destDir)
     {
-        throw new Error("Unimplemented");
+        // do nothing
     }
 
     public void setMaxFileSize(long x0)
