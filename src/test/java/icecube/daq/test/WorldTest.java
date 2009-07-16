@@ -2364,10 +2364,7 @@ public class WorldTest
             // ignore interrupts
         }
 
-        System.err.println("Output: II " + iiComp.getPayloadsSent() +
-                           " AM " + amComp.getPayloadsSent() +
-                           " GT " + gtComp.getPayloadsSent() +
-                           "");
+        DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, amComp, null);
 
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();
