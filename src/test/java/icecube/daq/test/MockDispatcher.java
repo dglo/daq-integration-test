@@ -3,6 +3,7 @@ package icecube.daq.test;
 import icecube.daq.eventbuilder.IEventPayload;
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.Dispatcher;
+import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
@@ -11,11 +12,13 @@ import java.nio.ByteBuffer;
 public class MockDispatcher
     implements Dispatcher
 {
+    private IByteBufferCache bufMgr;
     private int numSeen = 0;
     private int numBad = 0;
 
-    public MockDispatcher()
+    public MockDispatcher(IByteBufferCache bufMgr)
     {
+        this.bufMgr = bufMgr;
     }
 
     public void dataBoundary()
@@ -39,9 +42,20 @@ public class MockDispatcher
     public void dispatchEvent(IWriteablePayload pay)
         throws DispatchException
     {
+        ByteBuffer buf;
+        if (bufMgr == null) {
+            buf = null;
+        } else {
+            buf = bufMgr.acquireBuffer(pay.getPayloadLength());
+        }
+
         numSeen++;
         if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
             numBad++;
+        }
+
+        if (bufMgr != null && buf != null) {
+            bufMgr.returnBuffer(buf);
         }
     }
 
