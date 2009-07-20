@@ -503,12 +503,15 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             throw new Error("No icetop or in-ice hubs found");
         }
 
-        MockDispatcher disp = new MockDispatcher();
-
         // set up event builder
         EBComponent ebComp = new EBComponent(true);
-        ebComp.start(false);
+
+        IByteBufferCache ebEvtCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+        MockDispatcher disp = new MockDispatcher(ebEvtCache);
+
         ebComp.setDispatcher(disp);
+        ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
 
