@@ -1,31 +1,24 @@
 package icecube.daq.test;
 
-import icecube.daq.common.MockAppender;
-import icecube.daq.payload.IEventPayload;
-import icecube.daq.io.DAQComponentIOProcess;
+import icecube.daq.eventbuilder.IEventPayload;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.juggler.component.DAQCompException;
-import icecube.daq.juggler.component.IComponent;
-import icecube.daq.payload.TriggerRegistry;
-import icecube.daq.payload.IPayload;
+import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
-import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
+import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.splicer.HKN1Splicer;
-import icecube.daq.splicer.Splicer;
+import icecube.daq.trigger.ITriggerRequestPayload;
+import icecube.daq.trigger.TriggerRegistry;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
-import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,7 +30,8 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.log4j.BasicConfigurator;
 
@@ -46,17 +40,15 @@ public class GlobalTriggerPhysicsDataTest
 {
     private static final MockAppender appender =
         //new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
-        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(false);
+        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(true);
 
     private static final MockSourceID globalTrigSrcId =
         new MockSourceID(SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID);
 
-    private static HashMap<ISourceID, List<IPayload>> streams =
-        new HashMap<ISourceID, List<IPayload>>();
+    private static HashMap<ISourceID, List<IWriteablePayload>> streams =
+        new HashMap<ISourceID, List<IWriteablePayload>>();
 
     private static int numEventsInFile;
-
-    private Pipe[] tails;
 
     public GlobalTriggerPhysicsDataTest(String name)
     {
@@ -65,6 +57,20 @@ public class GlobalTriggerPhysicsDataTest
 
     private void checkLogMessages()
     {
+        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+            String msg = (String) appender.getMessage(i);
+
+            if (!(msg.startsWith("Clearing ") &&
+                  msg.endsWith(" rope entries")) &&
+                !msg.startsWith("Resetting counter ") &&
+                !msg.startsWith("Resetting decrement ") &&
+                !msg.startsWith("No match for timegate ") &&
+                !msg.contains("I3 GlobalTrigger Run Summary"))
+            {
+                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+            }
+        }
+        appender.clear();
     }
 
     private void dumpStreams(java.io.PrintStream out)
@@ -72,7 +78,7 @@ public class GlobalTriggerPhysicsDataTest
         for (ISourceID srcId : streams.keySet()) {
             out.println(srcId.toString());
 
-            for (IPayload pay : streams.get(srcId)) {
+            for (IWriteablePayload pay : streams.get(srcId)) {
                 ITriggerRequestPayload tr = (ITriggerRequestPayload) pay;
 
                 String name =
@@ -98,7 +104,7 @@ public class GlobalTriggerPhysicsDataTest
         int numPayloads = 0;
         int numEvents = 0;
         for (Object obj : rdr) {
-            IPayload payload = (IPayload) obj;
+            ILoadablePayload payload = (ILoadablePayload) obj;
             numPayloads++;
 
             try {
@@ -110,32 +116,26 @@ public class GlobalTriggerPhysicsDataTest
                 continue;
             }
 
-            if (payload instanceof IEventPayload) {
-                IEventPayload event = (IEventPayload) payload;
-                numEvents++;
-
-                extractTrigger(event.getTriggerRequestPayload());
-            } else if (payload instanceof ITriggerRequestPayload) {
-                ITriggerRequestPayload trig = (ITriggerRequestPayload) payload;
-                numEvents++;
-
-                extractTrigger(trig);
-            } else {
+            if (!(payload instanceof IEventPayload)) {
                 System.err.println("Ignoring non-event payload " +
                                    payload.getClass().getName() +
                                    " from " + dataPath);
                 continue;
             }
 
+            IEventPayload event = (IEventPayload) payload;
+            numEvents++;
+
+            extractTrigger(event.getTriggerRequestPayload());
         }
 
         return numEvents;
     }
 
-    private void extractTrigger(IPayload pay)
+    private void extractTrigger(IWriteablePayload pay)
     {
         try {
-            ((IPayload) pay).loadPayload();
+            ((ILoadablePayload) pay).loadPayload();
         } catch (Exception ex) {
             System.err.println("Couldn't load trigger request");
             ex.printStackTrace();
@@ -147,13 +147,13 @@ public class GlobalTriggerPhysicsDataTest
         ISourceID srcId = trigReq.getSourceID();
         if (srcId != null && !srcId.equals(globalTrigSrcId)) {
             if (!streams.containsKey(srcId)) {
-                streams.put(srcId, new ArrayList<IPayload>());
+                streams.put(srcId, new ArrayList<IWriteablePayload>());
             }
 
             streams.get(srcId).add(trigReq);
         }
 
-        Collection<IPayload> payList;
+        List payList;
         try {
             payList = trigReq.getPayloads();
         } catch (Exception ex) {
@@ -161,9 +161,9 @@ public class GlobalTriggerPhysicsDataTest
             return;
         }
 
-        for (IPayload sub : payList) {
-            if (sub instanceof ITriggerRequestPayload) {
-                extractTrigger((ITriggerRequestPayload) sub);
+        for (Object obj : payList) {
+            if (obj instanceof ITriggerRequestPayload) {
+                extractTrigger((ITriggerRequestPayload) obj);
             }
         }
     }
@@ -180,11 +180,12 @@ public class GlobalTriggerPhysicsDataTest
         }
     }
 
-    @Override
     protected void setUp()
         throws Exception
     {
         super.setUp();
+
+        appender.clear();
 
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
@@ -195,19 +196,11 @@ public class GlobalTriggerPhysicsDataTest
         return new TestSuite(GlobalTriggerPhysicsDataTest.class);
     }
 
-    @Override
     protected void tearDown()
         throws Exception
     {
-        try {
-            appender.assertNoLogMessages();
-
-            if (tails != null) {
-                DAQTestUtil.closePipeList(tails);
-            }
-        } finally {
-            System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
-        }
+        assertEquals("Bad number of log messages",
+                     0, appender.getNumberOfMessages());
 
         super.tearDown();
     }
@@ -216,17 +209,15 @@ public class GlobalTriggerPhysicsDataTest
         throws DAQCompException, IOException
     {
         if (streams.size() == 0) {
-            URL dataURL = getClass().getResource("/global_trigger.physics.dat");
-            if (dataURL == null) {
-                throw new IOException("Cannot find GT physics data");
-            }
+            String dataPath =
+                getClass().getResource("/global_trigger.physics.dat").getPath();
 
-            numEventsInFile = extractStreams(dataURL.getPath());
+            numEventsInFile = extractStreams(dataPath);
             sortStreams();
             //dumpStreams(System.out);
 
             if (streams.size() == 0) {
-                throw new Error(dataURL.getPath() + " seems to be empty");
+                throw new Error(dataPath + " seems to be empty");
             }
         }
 
@@ -234,43 +225,35 @@ public class GlobalTriggerPhysicsDataTest
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-2013-no-physminbias-001");
-
-        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
-                           cfgFile.getParent());
+                                        "sps-icecube-amanda-015");
 
         // set up global trigger
         GlobalTriggerComponent comp = new GlobalTriggerComponent();
-        comp.setAlerter(new MockAlerter());
         comp.setGlobalConfigurationDir(cfgFile.getParent());
-        comp.initialize();
-        comp.setFirstGoodTime(1);
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
 
-        tails = DAQTestUtil.connectToReader(comp.getReader(),
-                                            comp.getInputCache(), numTails);
+        WritableByteChannel[] tails =
+            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
+                                        numTails);
 
         GlobalTriggerValidator validator = new GlobalTriggerValidator();
 
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        final int runNum = 12345;
-
-        DAQTestUtil.startComponentIO(null, comp, null, null, null, runNum,
-                                     IComponent.DOMMODE_NORMAL);
+        DAQTestUtil.startIOProcess(comp.getReader());
+        DAQTestUtil.startIOProcess(comp.getWriter());
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 
         int nextTail = 0;
         for (ISourceID srcId : streams.keySet()) {
-            List<IPayload> stream = streams.get(srcId);
+            List<IWriteablePayload> stream = streams.get(srcId);
 
             prod[nextTail] =
-                new TriggerProducer(srcId.toString(), stream,
-                                    tails[nextTail].sink());
+                new TriggerProducer(srcId.toString(), stream, tails[nextTail]);
             prod[nextTail].start();
 
             nextTail++;
@@ -282,49 +265,43 @@ public class GlobalTriggerPhysicsDataTest
             for (int i = 0; done && i < prod.length; i++) {
                 if (prod[i].isRunning()) {
                     done = false;
-
-                    try {
-                        Thread.sleep(100);
-                    } catch (Exception ex) {
-                        // ignore exceptions
-                    }
                 }
             }
+
             if (done) {
                 break;
             }
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                // ignore interrupts
+            }
         }
 
+        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
+                                     "GTStopMsg");
+        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
+
         for (int i = 0; i < prod.length; i++) {
-            if (prod[i].isRunning()) {
-                fail("Producer #" + i + " is still running");
-            }
+            System.out.println(prod[i].getName() + " wrote " +
+                               prod[i].getNumberWritten());
+        }
+
+        comp.flush();
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ie) {
+            // ignore interrupts
         }
 
         int expEvents;
-        if (numEventsInFile == 2494) {
-            expEvents = 2483;
-        } else if (numEventsInFile == 2455) {
-            expEvents = 2370;
-        } else {
+        if (numEventsInFile != 2494) {
             expEvents = numEventsInFile;
-        }
-
-        ActivityMonitor activity =
-            new ActivityMonitor(null, null, comp, null);
-
-        activity.waitForStasis(10, 1000, expEvents, false, false);
-        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
-                                     "GTStopMsg");
-
-        activity.waitForStasis(10, 1000, expEvents, false, false);
-        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
-
-        if (false) {
-            for (int i = 0; i < prod.length; i++) {
-                System.out.println(prod[i].getName() + " wrote " +
-                                   prod[i].getNumberWritten());
-            }
+        } else {
+            // hack for file with bogus events (the 1% out-of-order bug)
+            expEvents = 2481;
         }
 
         assertEquals("Unexpected number of global triggers",
@@ -332,24 +309,12 @@ public class GlobalTriggerPhysicsDataTest
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 
-        DAQTestUtil.destroyComponentIO(null, comp, null, null, null);
-
-        try {
-            if (!appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
-                for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-                    final String msg = (String) appender.getMessage(i);
-                    if (!msg.startsWith("Resetting counter ") &&
-                        !msg.startsWith("Earliest time went "))
-                    {
-                        fail("Bad log message#" + i + ": " +
-                             appender.getMessage(i));
-                    }
-                }
-            }
-        } finally {
+        if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
+        } else {
+            checkLogMessages();
         }
-    }
+    }    
 
     public static void main(String[] args)
     {
@@ -369,7 +334,6 @@ public class GlobalTriggerPhysicsDataTest
             this.cmpOp = cmpOp;
         }
 
-        @Override
         public int compare(Object a, Object b)
         {
             ITriggerRequestPayload aTrig = (ITriggerRequestPayload) a;
@@ -460,7 +424,6 @@ public class GlobalTriggerPhysicsDataTest
             return cmp;
         }
 
-        @Override
         public boolean equals(Object obj)
         {
             return obj.getClass().getName().equals(getClass().getName());
@@ -470,7 +433,7 @@ public class GlobalTriggerPhysicsDataTest
     abstract class PayloadProducer
         implements Runnable
     {
-        private Logger LOG = Logger.getLogger(PayloadProducer.class);
+        private Log LOG = LogFactory.getLog(PayloadProducer.class);
 
         private String name;
         private Thread thread;
@@ -485,7 +448,7 @@ public class GlobalTriggerPhysicsDataTest
 
         abstract void finishThreadCleanup();
 
-        abstract IPayload getNextPayload();
+        abstract IWriteablePayload getNextPayload();
 
         public String getName()
         {
@@ -502,22 +465,22 @@ public class GlobalTriggerPhysicsDataTest
             return thread != null;
         }
 
-        @Override
         public void run()
         {
             ByteBuffer buf = null;
 
             while (true) {
-                IPayload pay = getNextPayload();
+                IWriteablePayload pay = getNextPayload();
                 if (pay == null) {
                     break;
                 }
 
-                if (buf == null || buf.capacity() < pay.length()) {
-                    buf = ByteBuffer.allocate(pay.length());
+                if (buf == null || buf.capacity() < pay.getPayloadLength()) {
+                    buf = ByteBuffer.allocate(pay.getPayloadLength());
                 }
 
                 buf.clear();
+
                 try {
                     pay.writePayload(true, 0, buf);
                     write(buf);
@@ -559,15 +522,15 @@ public class GlobalTriggerPhysicsDataTest
     class TriggerProducer
         extends PayloadProducer
     {
-        private Logger LOG = Logger.getLogger(TriggerProducer.class);
+        private Log LOG = LogFactory.getLog(TriggerProducer.class);
 
         private static final int STOP_MESSAGE_LENGTH = 4;
 
-        private List<IPayload> payloads;
+        private List<IWriteablePayload> payloads;
         private WritableByteChannel chanOut;
-        private Iterator<IPayload> iter;
+        private Iterator<IWriteablePayload> iter;
 
-        TriggerProducer(String name, List<IPayload> payloads,
+        TriggerProducer(String name, List<IWriteablePayload> payloads,
                         WritableByteChannel chanOut)
         {
             super(name);
@@ -582,7 +545,6 @@ public class GlobalTriggerPhysicsDataTest
             }
         }
 
-        @Override
         ByteBuffer buildStopMessage(ByteBuffer stopBuf)
         {
             if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
@@ -597,7 +559,6 @@ public class GlobalTriggerPhysicsDataTest
             return stopBuf;
         }
 
-        @Override
         void finishThreadCleanup()
         {
             try {
@@ -609,8 +570,7 @@ public class GlobalTriggerPhysicsDataTest
             chanOut = null;
         }
 
-        @Override
-        IPayload getNextPayload()
+        IWriteablePayload getNextPayload()
         {
             if (iter == null) {
                 iter = payloads.iterator();
@@ -623,7 +583,6 @@ public class GlobalTriggerPhysicsDataTest
             return iter.next();
         }
 
-        @Override
         void write(ByteBuffer buf)
             throws IOException
         {

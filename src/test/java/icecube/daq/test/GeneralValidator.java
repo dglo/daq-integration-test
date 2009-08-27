@@ -1,17 +1,17 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.IPayload;
+import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 class GeneralValidator
     extends BaseValidator
 {
-    private static final Logger LOG = Logger.getLogger(GeneralValidator.class);
+    private static final Log LOG = LogFactory.getLog(GeneralValidator.class);
 
-    @Override
-    public boolean validate(IPayload payload)
+    public boolean validate(IWriteablePayload payload)
     {
         if (!PayloadChecker.validatePayload(payload, true)) {
             LOG.error("Payload is not valid");
@@ -21,3 +21,4 @@ class GeneralValidator
         return true;
     }
 }
+

@@ -1,7 +1,7 @@
 package icecube.daq.test;
 
 import icecube.daq.io.DAQComponentOutputProcess;
-import icecube.daq.sender.SenderSubsystem;
+import icecube.daq.sender.Sender;
 import icecube.daq.stringhub.StringHubComponent;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ public class DomHitFileBridge
     private static final int STOP_MESSAGE_LENGTH = 32;
 
     private int hubNum;
-    private SenderSubsystem sender;
+    private Sender sender;
     private DAQComponentOutputProcess hitOut;
 
     public DomHitFileBridge(File dataFile, StringHubComponent shComp)
@@ -34,7 +34,6 @@ public class DomHitFileBridge
      *
      * @return stop message
      */
-    @Override
     ByteBuffer buildStopMessage(ByteBuffer stopBuf)
     {
         if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
@@ -50,17 +49,15 @@ public class DomHitFileBridge
         return stopBuf;
     }
 
-    @Override
-    void finishThreadCleanup()
-    {
-    }
-
-    @Override
     boolean isStopMessage(ByteBuffer buf)
     {
         return buf.limit() == STOP_MESSAGE_LENGTH &&
             buf.getInt(0) == STOP_MESSAGE_LENGTH &&
             buf.getLong(24) == Long.MAX_VALUE;
+    }
+
+    void finishThreadCleanup()
+    {
     }
 
     int getHubNumber()
@@ -70,15 +67,23 @@ public class DomHitFileBridge
 
     long getNumSent()
     {
-        return hitOut.getRecordsSent();
+        long[] recSent = hitOut.getRecordsSent();
+
+        long total = 0L;
+        if (recSent != null) {
+            for (int i = 0; i < recSent.length; i++) {
+                total += recSent[i];
+            }
+        }
+
+        return (int) total;
     }
 
-    @Override
-    void write(ByteBuffer buf) throws IOException
+    void write(ByteBuffer buf)
     {
         // don't overwhelm other threads
         Thread.yield();
 
-        sender.getHitInput().consume(buf);
+        sender.consume(buf);
     }
 }

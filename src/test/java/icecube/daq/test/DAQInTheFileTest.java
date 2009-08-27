@@ -1,16 +1,19 @@
 package icecube.daq.test;
 
+import icecube.daq.io.PayloadDestinationOutputEngine;
 import icecube.daq.io.PayloadFileReader;
+import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
+import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
+import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.impl.VitreousBufferCache;
+import icecube.daq.payload.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.io.File;
@@ -22,6 +25,7 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -46,8 +50,7 @@ public class DAQInTheFileTest
         super(name);
     }
 
-    @Override
-    StringHubComponent[] buildStringHubComponents(String configFile)
+    StringHubComponent[] buildStringHubComponents()
         throws DAQCompException, IOException
     {
         StringHubComponent[] shComps = new StringHubComponent[shMap.size()];
@@ -55,10 +58,8 @@ public class DAQInTheFileTest
 
         int num = 0;
         for (ISourceID srcId : shMap.keySet()) {
-            shComps[num] = new StringHubComponent(srcId.getSourceID());
-            shComps[num].setGlobalConfigurationDir(configFile);
-            shComps[num].initialize();
-            shComps[num].forceRandomMode();
+            shComps[num] =
+                new StringHubComponent(srcId.getSourceID(), true);
             shComps[num].start(false);
             shInput[num] = new DomHitFileBridge(shMap.get(srcId), shComps[num]);
             num++;
@@ -67,14 +68,16 @@ public class DAQInTheFileTest
         return shComps;
     }
 
-    @Override
-    int getNumberOfExpectedEvents()
+    int getNumberOfAmandaTriggerSent()
     {
-        return 509;
+        if (amInput == null) {
+            return 0;
+        }
+
+        return amInput.getNumberWritten();
     }
 
-    @Override
-    void initialize(IDOMRegistry domRegistry)
+    void initialize()
     {
         final String rawDataName = "raw_data";
         URL url = getClass().getResource("/" + rawDataName);
@@ -92,7 +95,9 @@ public class DAQInTheFileTest
         shMap = new HashMap<ISourceID, File>();
 
         for (File f : dataDir.listFiles()) {
-            if (f.getName().startsWith("HIT-stringHub#")) {
+            if (f.getName().equals("TRIG-amandaTrigger#0")) {
+                amTrigFile = f;
+            } else if (f.getName().startsWith("HIT-stringHub#")) {
                 int num;
                 try {
                     num = Integer.parseInt(f.getName().substring(14));
@@ -109,6 +114,14 @@ public class DAQInTheFileTest
         }
     }
 
+    void initializeAmandaInput(WritableByteChannel amTail)
+        throws IOException
+    {
+        if (amTrigFile != null) {
+            amInput = new PayloadFileBridge(amTrigFile, amTail);
+        }
+    }
+
     private void monitorInputs(int maxTries)
     {
         int prevAM = 0;
@@ -119,7 +132,7 @@ public class DAQInTheFileTest
 
         int numTries = 0;
 
-        StringBuilder rptBuf = new StringBuilder();
+        StringBuffer rptBuf = new StringBuffer();
 
         boolean isRunning = true;
         while (isRunning && numTries < maxTries) {
@@ -196,8 +209,13 @@ public class DAQInTheFileTest
         }
     }
 
-    @Override
+    boolean needAmandaTrig()
+    {
+        return amTrigFile != null;
+    }
+
     void sendData(StringHubComponent[] shComps)
+        throws DataFormatException, IOException
     {
         for (int i = 0; i < shInput.length; i++) {
             shInput[i].start();

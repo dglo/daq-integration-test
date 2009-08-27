@@ -1,20 +1,20 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
+import icecube.daq.trigger.ITriggerRequestPayload;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 class GlobalTriggerValidator
     extends TriggerValidator
 {
-    private Logger LOG = Logger.getLogger(GlobalTriggerValidator.class);
+    private Log LOG = LogFactory.getLog(GlobalTriggerValidator.class);
 
     private int prevUID;
     private long prevFirstTime = Long.MIN_VALUE;
     private long prevLastTime = Long.MIN_VALUE;
 
-    @Override
     boolean validateTrigger(ITriggerRequestPayload tr)
     {
         super.validateTrigger(tr);

@@ -1,23 +1,23 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.impl.PayloadFactory;
-import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IUTCTime;
+import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.MasterPayloadFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public abstract class BaseValidator
     implements PayloadValidator
 {
-    private static final Logger LOG = Logger.getLogger(BaseValidator.class);
+    private static final Log LOG = LogFactory.getLog(BaseValidator.class);
 
+    private MasterPayloadFactory factory;
     private boolean foundInvalid;
-    private PayloadFactory factory;
 
-    @Override
     public boolean foundInvalid()
     {
         return foundInvalid;
@@ -32,9 +32,9 @@ public abstract class BaseValidator
         return time.longValue();
     }
 
-    static void dumpPayloadBytes(IPayload payload)
+    static void dumpPayloadBytes(IWriteablePayload payload)
     {
-        ByteBuffer buf = ByteBuffer.allocate(payload.length());
+        ByteBuffer buf = ByteBuffer.allocate(payload.getPayloadLength());
 
         int len;
         try {
@@ -44,7 +44,7 @@ public abstract class BaseValidator
             len = -1;
         }
 
-        StringBuilder strbuf = new StringBuilder();
+        StringBuffer strbuf = new StringBuffer();
         for (int i = 0; i < buf.limit(); i++) {
             String str = Integer.toHexString(buf.get(i));
             if (str.length() < 2) {
@@ -60,7 +60,6 @@ public abstract class BaseValidator
         System.err.println("LEN "+len+" HEX "+strbuf.toString());
     }
 
-    @Override
     public boolean validate(ByteBuffer payBuf)
     {
         // assume stop messages are valid
@@ -69,31 +68,21 @@ public abstract class BaseValidator
         }
 
         if (factory == null) {
-            factory = new PayloadFactory(new MockBufferCache("Validator"));
+            factory = new MasterPayloadFactory();
         }
 
-        IPayload payload;
+        IWriteablePayload payload;
         try {
-            payload = factory.getPayload(payBuf, 0);
+            payload = factory.createPayload(0, payBuf, false);
         } catch (Exception ex) {
-            LOG.error("Couldn't create payload from byte buffer " + payBuf, ex);
-            foundInvalid = true;
-            return false;
-        }
-
-        try {
-            ((IPayload) payload).loadPayload();
-        } catch (Exception ex) {
-            LOG.error("Couldn't load payload " + payload, ex);
-            foundInvalid = true;
+            LOG.error("Couldn't validate byte buffer", ex);
+            foundInvalid = false;
             return false;
         }
 
         boolean isValid = validate(payload);
 
         foundInvalid |= !isValid;
-
-        payload.recycle();
 
         return isValid;
     }

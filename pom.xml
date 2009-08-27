@@ -1,4 +1,7 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <parent>
     <artifactId>pDAQ</artifactId>
@@ -9,7 +12,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>daq-integration-test</artifactId>
   <packaging>jar</packaging>
-  <name>DAQ integration tests</name>
+  <name>daq-integration-test</name>
   <description>Integration tests for the Surface Data Acquisition system for the IceCube Project.</description>
 
   <scm>
@@ -59,13 +62,18 @@
     </dependency>
 
     <dependency>
-      <groupId>edu.wisc.icecube</groupId>
-      <artifactId>StringHub</artifactId>
+      <groupId>colt</groupId>
+      <artifactId>colt</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
+      <groupId>jaxen</groupId>
+      <artifactId>jaxen</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.wisc.icecube</groupId>
+      <artifactId>StringHub</artifactId>
     </dependency>
   </dependencies>
 

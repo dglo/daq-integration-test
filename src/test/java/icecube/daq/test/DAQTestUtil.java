@@ -1,22 +1,26 @@
 package icecube.daq.test;
 
 import icecube.daq.eventBuilder.EBComponent;
+import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.DAQComponentOutputProcess;
-import icecube.daq.io.DAQStreamReader;
+import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.MasterPayloadFactory;
+import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.stringhub.StringHubComponent;
-import icecube.daq.trigger.component.GlobalTriggerComponent;
+import icecube.daq.trigger.component.AmandaTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
+import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
+import icecube.daq.trigger.impl.TriggerRequestPayloadFactory;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -26,11 +30,12 @@ import java.util.ArrayList;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 class ChannelData
 {
-    private static final Logger LOG = Logger.getLogger(ChannelData.class);
+    private static final Log LOG = LogFactory.getLog(ChannelData.class);
 
     private String name;
     private java.nio.channels.Channel chan;
@@ -52,15 +57,9 @@ class ChannelData
     {
         if (chan.isOpen()) {
             LOG.error(toString() + " has not been closed");
-            try {
-                chan.close();
-            } catch (IOException ioe) {
-                // ignore errors
-            }
         }
     }
 
-    @Override
     public String toString()
     {
         StringBuilder buf = new StringBuilder("Channel[");
@@ -124,138 +123,112 @@ public final class DAQTestUtil
                                    GlobalTriggerComponent gtComp,
                                    IcetopTriggerComponent itComp,
                                    IniceTriggerComponent iiComp,
+                                   AmandaTriggerComponent amComp,
                                    StringHubComponent[] shComps)
-        throws DAQCompException
-    {
-        checkCaches(ebComp, gtComp, itComp, iiComp, shComps, true);
-    }
-
-    public static void checkCaches(EBComponent ebComp,
-                                   GlobalTriggerComponent gtComp,
-                                   IcetopTriggerComponent itComp,
-                                   IniceTriggerComponent iiComp,
-                                   StringHubComponent[] shComps,
-                                   boolean crossCheck)
         throws DAQCompException
     {
         final boolean debug = false;
 
-        if (crossCheck && gtComp != null && ebComp != null) {
-            assertEquals("Mismatch between global triggers sent and" +
-                         " events sent", gtComp.getPayloadsSent() - 1,
-                         ebComp.getEventsSent());
-        }
+        assertEquals("Mismatch between global triggers sent and events sent",
+                     gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
 
-        IByteBufferCache ebGTCache = null;
+        IByteBufferCache ebGTCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
+        if (debug) System.err.println("EB GTcache " + ebGTCache);
+        assertTrue("EB trigger buffer cache is unbalanced (" + ebGTCache + ")",
+                   ebGTCache.isBalanced());
+        assertTrue("EB trigger buffer cache is unused (" + ebGTCache +
+                   ")", ebGTCache.getTotalBuffersAcquired() > 0);
 
-        if (ebComp != null) {
-            ebGTCache =
-                ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
-            if (debug) System.err.println("EB GTcache " + ebGTCache);
-            assertTrue("EB trigger buffer cache is unbalanced (" + ebGTCache +
-                       ")", ebGTCache.isBalanced());
-            assertTrue("EB trigger buffer cache is unused (" + ebGTCache +
-                       ")", ebGTCache.getTotalBuffersAcquired() > 0);
+        IByteBufferCache ebRDCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+        if (debug) System.err.println("EB RDcache " + ebRDCache);
+        if (debug) System.err.println("EB RDrcvd " + ebComp.getReadoutsReceived());
+        assertTrue("EB readout data buffer cache is unbalanced (" + ebRDCache +
+                   ")", ebRDCache.isBalanced());
+        assertTrue("EB readout data buffer cache is unused (" + ebRDCache +
+                   ")", ebRDCache.getTotalBuffersAcquired() > 0);
 
-            IByteBufferCache ebRDCache =
-                ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
-            if (debug) System.err.println("EB RDcache " + ebRDCache);
-            if (debug) System.err.println("EB RDrcvd " +
-                                          ebComp.getReadoutsReceived());
-            assertTrue("EB readout data buffer cache is unbalanced (" +
-                       ebRDCache + ")", ebRDCache.isBalanced());
-            assertTrue("EB readout data buffer cache is unused (" + ebRDCache +
-                       ")", ebRDCache.getTotalBuffersAcquired() > 0);
+        IByteBufferCache ebEvtCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+        if (debug) System.err.println("EB EVTcache " + ebEvtCache);
+        assertTrue("EB event buffer cache is unbalanced (" + ebEvtCache + ")",
+                   ebEvtCache.isBalanced());
+        assertTrue("EB event buffer cache is unused (" + ebEvtCache + ")",
+                   ebEvtCache.getTotalBuffersAcquired() > 0);
 
-            IByteBufferCache ebEvtCache =
-                ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
-            if (debug) System.err.println("EB EVTcache " + ebEvtCache);
-            assertTrue("EB event buffer cache is unbalanced (" + ebEvtCache +
-                       ")", ebEvtCache.isBalanced());
-            assertTrue("EB event buffer cache is unused (" + ebEvtCache + ")",
-                       ebEvtCache.getTotalBuffersAcquired() > 0);
+        IByteBufferCache ebGenCache =
+            ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+        if (debug) System.err.println("EB GENcache " + ebGenCache);
+        assertTrue("EB Generic buffer cache is unbalanced (" + ebGenCache + ")",
+                   ebGenCache.isBalanced());
+        assertTrue("EB Generic buffer cache is unused (" + ebGenCache + ")",
+                   ebGenCache.getTotalBuffersAcquired() > 0);
 
-            IByteBufferCache ebGenCache =
-                ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
-            if (debug) System.err.println("EB GENcache " + ebGenCache);
-            assertTrue("EB Generic buffer cache is unbalanced (" + ebGenCache +
-                       ")", ebGenCache.isBalanced());
-            assertTrue("EB Generic buffer cache is unused (" + ebGenCache +
-                       ")", ebGenCache.getTotalBuffersAcquired() > 0);
+        // readouts are allocated twice
+        assertEquals("Mismatch between readouts received and allocated",
+                     ebComp.getReadoutsReceived() * 2,
+                     ebRDCache.getTotalBuffersAcquired());
 
-            assertEquals("Mismatch between readouts received and allocated",
-                         ebComp.getReadoutsReceived(),
-                         ebRDCache.getTotalBuffersAcquired());
-        }
+        if (gtComp != null) checkTriggerCaches(gtComp, "Global trigger", debug);
+        if (itComp != null) checkTriggerCaches(itComp, "Icetop trigger", debug);
+        if (iiComp != null) checkTriggerCaches(iiComp, "In-ice trigger", debug);
+        if (amComp != null) checkTriggerCaches(amComp, "Amanda trigger", debug);
 
-        if (gtComp != null) {
-            checkTriggerCaches(gtComp, "Global trigger", debug);
-        }
-        if (itComp != null) {
-            checkTriggerCaches(itComp, "Icetop trigger", debug);
-        }
-        if (iiComp != null) {
-            checkTriggerCaches(iiComp, "In-ice trigger", debug);
-        }
+        // triggers are allocated when they're read in
+        // and again when they're copied into the event
+        assertEquals("Mismatch between triggers sent and events sent",
+                     (gtComp.getPayloadsSent() - 1) * 2,
+                     ebGTCache.getTotalBuffersAcquired());
 
-        if (crossCheck && gtComp != null && ebGTCache != null) {
-            assertEquals("Mismatch between triggers sent and events sent",
-                         (gtComp.getPayloadsSent() - 1),
-                         ebGTCache.getTotalBuffersAcquired());
-        }
+        for (int i = 0; shComps != null && i < shComps.length; i++) {
+            final String name = "SH#" + shComps[i].getHubId();
 
-        if (shComps != null) {
-            for (int i = 0; i < shComps.length; i++) {
-                final String name = "SH#" + shComps[i].getHubId();
+            IByteBufferCache shRDCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+            if (debug) System.err.println("SH RDcache " + shRDCache);
+            assertTrue(name + " readout data buffer cache is unbalanced (" +
+                       shRDCache + ")", shRDCache.isBalanced());
+//           assertTrue(name + " readout data buffer cache is unused (" +
+//                       shRDCache + ")",
+//                       shRDCache.getTotalBuffersAcquired() > 0);
+ System.err.println(name + " readout data buffer is unused");
 
-                IByteBufferCache shRDCache =
-                    shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
-                if (debug) System.err.println("SH RDcache " + shRDCache);
-                assertTrue(name + " readout data buffer cache is unbalanced" +
-                           " (" + shRDCache + ")", shRDCache.isBalanced());
-                //assertTrue(name + " readout data buffer cache is unused (" +
-                //           shRDCache + ")",
-                //           shRDCache.getTotalBuffersAcquired() > 0);
-
-                IByteBufferCache shGenCache =
-                    shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
-                if (debug) System.err.println(name + " Gencache " +
-                                              shGenCache);
-                assertTrue(name + " generic buffer cache is unbalanced (" +
+            IByteBufferCache shGenCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+            if (debug) System.err.println(name + " Gencache " + shGenCache);
+            assertTrue(name + " generic buffer cache is unbalanced (" +
                        shGenCache + ")", shGenCache.isBalanced());
-                assertTrue(name + " generic buffer cache is unused (" +
-                           shGenCache + ")",
-                           shGenCache.getTotalBuffersAcquired() > 0);
+            assertTrue(name + " generic buffer cache is unused (" +
+                       shGenCache + ")",
+                       shGenCache.getTotalBuffersAcquired() > 0);
 
-                IByteBufferCache shMoniCache =
-                    shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
-                if (debug) System.err.println(name + " Monicache " +
-                                              shMoniCache);
-                assertTrue(name + " MONI buffer cache is unbalanced (" +
-                           shMoniCache + ")", shMoniCache.isBalanced());
-                assertTrue(name + " MONI buffer cache was used (" +
-                           shMoniCache + ")",
-                           shMoniCache.getTotalBuffersAcquired() == 0);
+            IByteBufferCache shMoniCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
+            if (debug) System.err.println(name + " Monicache " + shMoniCache);
+            assertTrue(name + " MONI buffer cache is unbalanced (" +
+                       shMoniCache + ")", shMoniCache.isBalanced());
+            assertTrue(name + " MONI buffer cache was used (" +
+                       shMoniCache + ")",
+                       shMoniCache.getTotalBuffersAcquired() == 0);
 
-                IByteBufferCache shTCalCache =
-                    shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
-                if (debug) System.err.println(name + " TCalcache " +
-                                              shTCalCache);
-                assertTrue(name + " TCal buffer cache is unbalanced (" +
-                           shTCalCache + ")", shTCalCache.isBalanced());
-                assertTrue(name + " TCal buffer cache was used (" +
-                           shTCalCache + ")",
-                           shTCalCache.getTotalBuffersAcquired() == 0);
+            IByteBufferCache shTCalCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
+            if (debug) System.err.println(name + " TCalcache " + shTCalCache);
+            assertTrue(name + " TCal buffer cache is unbalanced (" +
+                       shTCalCache + ")", shTCalCache.isBalanced());
+            assertTrue(name + " TCal buffer cache was used (" +
+                       shTCalCache + ")",
+                       shTCalCache.getTotalBuffersAcquired() == 0);
 
-                IByteBufferCache shSNCache =
-                    shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
-                if (debug) System.err.println(name + " SNcache " + shSNCache);
-                assertTrue(name + " SN buffer cache is unbalanced (" +
-                           shSNCache + ")", shSNCache.isBalanced());
-                assertTrue(name + " SN buffer cache was used (" +
-                           shSNCache + ")",
-                           shSNCache.getTotalBuffersAcquired() == 0);
-            }
+            IByteBufferCache shSNCache =
+                shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
+            if (debug) System.err.println(name + " SNcache " + shSNCache);
+            assertTrue(name + " SN buffer cache is unbalanced (" +
+                       shSNCache + ")", shSNCache.isBalanced());
+            assertTrue(name + " SN buffer cache was used (" +
+                       shSNCache + ")",
+                       shSNCache.getTotalBuffersAcquired() == 0);
         }
     }
 
@@ -287,19 +260,10 @@ public final class DAQTestUtil
         chanData.clear();
     }
 
-    public static final void closePipeList(Pipe[] list)
+    public static final void logOpenChannels()
     {
-        for (int i = 0; i < list.length; i++) {
-            try {
-                list[i].sink().close();
-            } catch (IOException ioe) {
-                // ignore errors on close
-            }
-            try {
-                list[i].source().close();
-            } catch (IOException ioe) {
-                // ignore errors on close
-            }
+        for (ChannelData cd : chanData) {
+            cd.logOpen();
         }
     }
 
@@ -322,7 +286,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name, srcOut));
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache, "Sink");
+        out.addDataChannel(sinkOut, outCache);
 
         if (startOut) {
             startIOProcess(out);
@@ -335,8 +299,43 @@ public final class DAQTestUtil
         return consumer;
     }
 
-    public static Pipe connectToReader(DAQStreamReader rdr,
-                                       IByteBufferCache cache)
+    public static WritableByteChannel connectToReader(PayloadReader rdr,
+                                                      IByteBufferCache cache)
+        throws IOException
+    {
+        return connectToReader(rdr, cache, true);
+    }
+
+    public static WritableByteChannel[] connectToReader(PayloadReader rdr,
+                                                        IByteBufferCache cache,
+                                                        int numTails)
+        throws IOException
+    {
+        return connectToReader(rdr, cache, numTails, true);
+    }
+
+    public static WritableByteChannel[] connectToReader(PayloadReader rdr,
+                                                        IByteBufferCache cache,
+                                                        int numTails,
+                                                        boolean startReader)
+        throws IOException
+    {
+        WritableByteChannel[] chanList = new WritableByteChannel[numTails];
+
+        for (int i = 0; i < chanList.length; i++) {
+            chanList[i] = connectToReader(rdr, cache, false);
+        }
+
+        if (startReader) {
+            startIOProcess(rdr);
+        }
+
+        return chanList;
+    }
+
+    public static WritableByteChannel connectToReader(PayloadReader rdr,
+                                                      IByteBufferCache cache,
+                                                      boolean startReader)
         throws IOException
     {
         Pipe testPipe = Pipe.open();
@@ -349,63 +348,40 @@ public final class DAQTestUtil
         chanData.add(new ChannelData("rdrSrc", sourceChannel));
         sourceChannel.configureBlocking(false);
 
-        rdr.addDataChannel(sourceChannel, "rdrSink", cache, 1024);
+        rdr.addDataChannel(sourceChannel, cache, 1024);
 
-        return testPipe;
+        if (startReader) {
+            startIOProcess(rdr);
+        }
+
+        return sinkChannel;
     }
 
-    public static Pipe[] connectToReader(DAQStreamReader rdr,
-                                         IByteBufferCache cache,
-                                         int numTails)
-        throws IOException
+    public static ReadoutDataPayloadFactory
+        getReadoutDataFactory(MasterPayloadFactory factory)
     {
-        Pipe[] chanList = new Pipe[numTails];
+        final int payloadId =
+            PayloadRegistry.PAYLOAD_ID_READOUT_DATA;
 
-        for (int i = 0; i < chanList.length; i++) {
-            chanList[i] = connectToReader(rdr, cache);
-        }
-
-        return chanList;
+        return (ReadoutDataPayloadFactory)
+            factory.getPayloadFactory(payloadId);
     }
 
-    public static void destroyComponentIO(EBComponent ebComp,
-                                          GlobalTriggerComponent gtComp,
-                                          IcetopTriggerComponent itComp,
-                                          IniceTriggerComponent iiComp,
-                                          StringHubComponent[] shComps)
+    public static TriggerRequestPayloadFactory
+        getTriggerRequestFactory(MasterPayloadFactory factory)
     {
-        if (ebComp != null) {
-            ebComp.getTriggerReader().destroyProcessor();
-            ebComp.getRequestWriter().destroyProcessor();
-            ebComp.getDataReader().destroyProcessor();
-        }
-        if (gtComp != null) {
-            gtComp.getReader().destroyProcessor();
-            gtComp.getWriter().destroyProcessor();
-        }
-        if (itComp != null) {
-            itComp.getReader().destroyProcessor();
-            itComp.getWriter().destroyProcessor();
-        }
-        if (iiComp != null) {
-            iiComp.getReader().destroyProcessor();
-            iiComp.getWriter().destroyProcessor();
-        }
+        final int payloadId =
+            PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST;
 
-        if (shComps != null) {
-            for (int i = 0; i < shComps.length; i++) {
-                shComps[i].getHitWriter().destroyProcessor();
-                shComps[i].getRequestReader().destroyProcessor();
-                shComps[i].getDataWriter().destroyProcessor();
-            }
-        }
+        return (TriggerRequestPayloadFactory)
+            factory.getPayloadFactory(payloadId);
     }
 
     public static void glueComponents(String name,
                                       DAQComponentOutputProcess out,
                                       IByteBufferCache outCache,
                                       PayloadValidator validator,
-                                      DAQStreamReader in,
+                                      PayloadReader in,
                                       IByteBufferCache inCache)
         throws IOException
     {
@@ -422,7 +398,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name + "*OUT", srcOut));
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache, name + "*GLUE");
+        out.addDataChannel(sinkOut, outCache);
 
         if (startOut) {
             startIOProcess(out);
@@ -438,7 +414,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name + "*IN", srcIn));
         srcIn.configureBlocking(false);
 
-        in.addDataChannel(srcIn, "glueChan", inCache, 1024);
+        in.addDataChannel(srcIn, inCache, 1024);
 
         if (startIn) {
             startIOProcess(in);
@@ -449,7 +425,7 @@ public final class DAQTestUtil
         bridge.start();
     }
 
-    public static void initReader(DAQStreamReader rdr, Splicer splicer,
+    public static void initReader(PayloadReader rdr, Splicer splicer,
                                    String rdrName)
     {
         rdr.start();
@@ -457,43 +433,6 @@ public final class DAQTestUtil
         if (!rdr.isStopped()) {
             throw new Error(rdrName + " in " + rdr.getPresentState() +
                             ", not Idle after creation");
-        }
-    }
-
-    public static final void logOpenChannels()
-    {
-        for (ChannelData cd : chanData) {
-            cd.logOpen();
-        }
-    }
-
-    public static void removeDispatchedFiles(String destDir)
-    {
-        File dir = new File(destDir);
-        for (File file : dir.listFiles(new FilenameFilter() {
-                public boolean accept(File dir, String name) {
-                    if (!name.startsWith("physics_") &&
-                        !name.startsWith("moni_") &&
-                        !name.startsWith("sn_") &&
-                        !name.startsWith("tcal_"))
-                    {
-                        return false;
-                    }
-                    if (!name.endsWith(".dat")) {
-                        return false;
-                    }
-                    return true;
-                }
-            }))
-        {
-            try {
-                if (!file.delete()) {
-                    System.err.println("Cannot delete \"" + file + "\"");
-                }
-            } catch (SecurityException se) {
-                System.err.println("Cannot delete \"" + file + "\"");
-                se.printStackTrace();
-            }
         }
     }
 
@@ -512,81 +451,29 @@ public final class DAQTestUtil
         }
     }
 
-    public static void sendStops(Pipe[] tails)
+    public static void sendStops(WritableByteChannel[] tails)
         throws IOException
     {
         for (int i = 0; i < tails.length; i++) {
-            sendStopMsg(tails[i].sink());
+            sendStopMsg(tails[i]);
         }
     }
 
-    public static void startComponentIO(EBComponent ebComp,
-                                        GlobalTriggerComponent gtComp,
-                                        IcetopTriggerComponent itComp,
-                                        IniceTriggerComponent iiComp,
-                                        StringHubComponent[] shComps,
-                                        int runNumber, int domMode)
-        throws DAQCompException, IOException
+    public static void startIOProcess(DAQComponentIOProcess rdr)
     {
-        ArrayList<DAQComponentIOProcess> procList =
-            new ArrayList<DAQComponentIOProcess>();
-
-        if (ebComp != null) {
-            ebComp.starting(runNumber, domMode);
-            procList.add(ebComp.getTriggerReader());
-            procList.add(ebComp.getRequestWriter());
-            procList.add(ebComp.getDataReader());
-        }
-        if (gtComp != null) {
-            gtComp.starting(runNumber, domMode);
-            procList.add(gtComp.getReader());
-            procList.add(gtComp.getWriter());
-        }
-        if (itComp != null) {
-            itComp.starting(runNumber, domMode);
-            procList.add(itComp.getReader());
-            procList.add(itComp.getWriter());
-        }
-        if (iiComp != null) {
-            iiComp.starting(runNumber, domMode);
-            procList.add(iiComp.getReader());
-            procList.add(iiComp.getWriter());
-        }
-        if (shComps != null) {
-            for (int i = 0; i < shComps.length; i++) {
-                // starting hubs involves hardware initialization
-                // so do the bare minimum needed to init Sender
-                shComps[i].setRunNumber(runNumber);
-                shComps[i].setDOMMode(domMode);
-                shComps[i].getSender().startup();
-                procList.add(shComps[i].getHitWriter());
-                procList.add(shComps[i].getRequestReader());
-                procList.add(shComps[i].getDataWriter());
-            }
-        }
-
-        for (DAQComponentIOProcess proc : procList) {
-            if (!proc.isRunning()) {
-                proc.startProcessing();
-            }
-        }
-
-        for (DAQComponentIOProcess proc : procList) {
-            if (!proc.isRunning()) {
-                waitUntilRunning(proc);
-            }
+        if (!rdr.isRunning()) {
+            rdr.startProcessing();
+            waitUntilRunning(rdr);
         }
     }
 
-    private static void startIOProcess(DAQComponentIOProcess proc)
+    public static final void waitUntilRunning(DAQComponentIOProcess proc)
     {
-        if (!proc.isRunning()) {
-            proc.startProcessing();
-            waitUntilRunning(proc);
-        }
+        waitUntilRunning(proc, "");
     }
 
-    private static final void waitUntilRunning(DAQComponentIOProcess proc)
+    public static final void waitUntilRunning(DAQComponentIOProcess proc,
+                                              String extra)
     {
         for (int i = 0; i < REPS && !proc.isRunning(); i++) {
             try {
@@ -597,7 +484,7 @@ public final class DAQTestUtil
         }
 
         assertTrue("IOProcess in " + proc.getPresentState() +
-                   ", not Running after StartSig", proc.isRunning());
+                   ", not Running after StartSig" + extra, proc.isRunning());
     }
 
     public static final void waitUntilStopped(DAQComponentIOProcess proc,
@@ -612,25 +499,13 @@ public final class DAQTestUtil
                                                String action,
                                                String extra)
     {
-        waitUntilStopped(proc, splicer, action, "", REPS, SLEEP_TIME);
-    }
-
-    public static final void waitUntilStopped(DAQComponentIOProcess proc,
-                                              Splicer splicer,
-                                              String action,
-                                              String extra,
-                                              int maxReps, int sleepTime)
-    {
-        int numReps = 0;
-        while (numReps < maxReps &&
-               ((proc != null && !proc.isStopped()) ||
-                (splicer != null &&
-                 splicer.getState() != Splicer.State.STOPPED)))
+        for (int i = 0; i < REPS &&
+                 ((proc != null && !proc.isStopped()) ||
+                  (splicer != null && splicer.getState() != Splicer.STOPPED));
+             i++)
         {
-            numReps++;
-
             try {
-                Thread.sleep(sleepTime);
+                Thread.sleep(SLEEP_TIME);
             } catch (InterruptedException ie) {
                 // ignore interrupts
             }
@@ -641,9 +516,9 @@ public final class DAQTestUtil
                        ", not Idle after " + action + extra, proc.isStopped());
         }
         if (splicer != null) {
-            assertTrue("Splicer in " + splicer.getState().name() +
-                       ", not STOPPED after " + numReps + " reps of " + action +
-                       extra, splicer.getState() == Splicer.State.STOPPED);
+            assertTrue("Splicer in " + splicer.getStateString() +
+                       ", not STOPPED after " + action + extra,
+                       splicer.getState() == Splicer.STOPPED);
         }
     }
 }

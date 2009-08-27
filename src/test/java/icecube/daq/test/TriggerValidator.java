@@ -1,18 +1,18 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.IPayload;
-import icecube.daq.payload.ITriggerRequestPayload;
+import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
+import icecube.daq.trigger.ITriggerRequestPayload;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 class TriggerValidator
     extends BaseValidator
 {
-    private static final Logger LOG = Logger.getLogger(TriggerValidator.class);
+    private static final Log LOG = LogFactory.getLog(TriggerValidator.class);
 
-    @Override
-    public boolean validate(IPayload payload)
+    public boolean validate(IWriteablePayload payload)
     {
         if (!(payload instanceof ITriggerRequestPayload)) {
             throw new Error("Unexpected payload " +
@@ -34,3 +34,4 @@ class TriggerValidator
         return true;
     }
 }
+

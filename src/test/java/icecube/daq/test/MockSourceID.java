@@ -2,9 +2,10 @@ package icecube.daq.test;
 
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.SourceIdRegistry;
+import icecube.util.Poolable;
 
 public class MockSourceID
-    implements ISourceID
+    implements ISourceID, Poolable
 {
     private int id;
 
@@ -13,7 +14,6 @@ public class MockSourceID
         this.id = id;
     }
 
-    @Override
     public int compareTo(Object obj)
     {
         if (obj == null) {
@@ -25,28 +25,52 @@ public class MockSourceID
         return getSourceID() - ((ISourceID) obj).getSourceID();
     }
 
-    @Override
     public Object deepCopy()
     {
         return new MockSourceID(id);
     }
 
-    @Override
+    /**
+     * Object is able to dispose of itself.
+     * This means it is able to return itself to the pool from
+     * which it came.
+     */
+    public void dispose()
+    {
+        // do nothing
+    }
+
     public boolean equals(Object obj)
     {
         return compareTo(obj) == 0;
     }
 
-    @Override
+    /**
+     * Get an object from the pool in a non-static context.
+     *
+     * @return object of this type from the object pool.
+     */
+    public Poolable getPoolable()
+    {
+        return new MockSourceID(-1);
+    }
+
     public int getSourceID()
     {
         return id;
     }
 
-    @Override
     public int hashCode()
     {
         return id;
+    }
+
+    /**
+     * Object knows how to recycle itself
+     */
+    public void recycle()
+    {
+        // do nothing
     }
 
     /**
@@ -54,7 +78,6 @@ public class MockSourceID
      *
      * @return DAQName#DAQId
      */
-    @Override
     public String toString()
     {
         return SourceIdRegistry.getDAQNameFromSourceID(id) + "#" +

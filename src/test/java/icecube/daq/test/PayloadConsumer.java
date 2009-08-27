@@ -13,7 +13,7 @@ public abstract class PayloadConsumer
     private Thread thread;
     private int numWritten;
     private PayloadValidator validator;
-    private int limit;
+
 
     public PayloadConsumer(String inputName, ReadableByteChannel chanIn)
     {
@@ -44,7 +44,6 @@ public abstract class PayloadConsumer
 
     abstract boolean isStopMessage(ByteBuffer buf);
 
-    @Override
     public void run()
     {
         ByteBuffer lenBuf = ByteBuffer.allocate(4);
@@ -107,10 +106,6 @@ public abstract class PayloadConsumer
             }
 
             numWritten++;
-
-            if (limit > 0 && numWritten > limit) {
-                break;
-            }
         }
 
         try {
@@ -136,11 +131,6 @@ public abstract class PayloadConsumer
         thread = null;
     }
 
-    void setLimit(int limit)
-    {
-        this.limit = limit;
-    }
-
     void setValidator(PayloadValidator validator)
     {
         this.validator = validator;
@@ -158,7 +148,6 @@ public abstract class PayloadConsumer
     abstract void write(ByteBuffer buf)
         throws IOException;
 
-    @Override
     public String toString()
     {
         return inputName + "#" + numWritten + (isRunning() ? "" : "(stopped)");

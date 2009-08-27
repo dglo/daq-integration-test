@@ -1,16 +1,15 @@
 package icecube.daq.test;
 
-import icecube.daq.common.EventVersion;
 import icecube.daq.io.DAQSourceIdOutputProcess;
-import icecube.daq.io.DAQStreamReader;
-import icecube.daq.payload.impl.PayloadFactory;
+import icecube.daq.io.PayloadReader;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.IPayload;
-import icecube.daq.payload.IReadoutRequest;
-import icecube.daq.payload.IReadoutRequestElement;
+import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
-import icecube.daq.payload.PayloadException;
+import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.MasterPayloadFactory;
 import icecube.daq.payload.PayloadRegistry;
+import icecube.daq.trigger.IReadoutRequest;
+import icecube.daq.trigger.IReadoutRequestElement;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -18,27 +17,23 @@ import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.HashMap;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class RequestToDataBridge
     extends PayloadFileBridge
 {
-    private static final Logger LOG = Logger.getLogger(RequestToDataBridge.class);
+    private static final Log LOG = LogFactory.getLog(RequestToDataBridge.class);
 
     private static short nextNum;
 
     private ISourceID srcId;
     private List<HitData> hitList;
-    private int numRcvd;
-    private int numEmpty;
-    private int numSent;
-    private int numDone;
 
-    private PayloadFactory factory;
+    private MasterPayloadFactory factory;
 
     private RequestToDataBridge(ISourceID srcId, ReadableByteChannel reqIn,
                           WritableByteChannel dataOut, List<HitData> hitList)
@@ -49,16 +44,16 @@ public class RequestToDataBridge
         this.hitList = hitList;
     }
 
-    public static Map<ISourceID, RequestToDataBridge>
-        createLinks(DAQSourceIdOutputProcess reqOut,
-                    PayloadValidator validator, DAQStreamReader dataIn,
-                    IByteBufferCache dataCache, List<HitData> hitList)
+    public static List<ISourceID> createLinks(DAQSourceIdOutputProcess reqOut,
+                                              PayloadValidator validator,
+                                              PayloadReader dataIn,
+                                              IByteBufferCache dataCache,
+                                              List<HitData> hitList)
         throws IOException
     {
-        HashMap<ISourceID, RequestToDataBridge> bridgeMap =
-            new HashMap<ISourceID, RequestToDataBridge>();
+        List<ISourceID> idList = getSourceIds(hitList);
 
-        for (ISourceID srcId : getSourceIds(hitList)) {
+        for (ISourceID srcId : idList) {
             Pipe outPipe = Pipe.open();
 
             Pipe.SinkChannel sinkOut = outPipe.sink();
@@ -77,17 +72,15 @@ public class RequestToDataBridge
             Pipe.SourceChannel srcIn = inPipe.source();
             srcIn.configureBlocking(false);
 
-            dataIn.addDataChannel(srcIn, "r2dbChan", dataCache, 1024);
+            dataIn.addDataChannel(srcIn, dataCache, 1024);
 
             RequestToDataBridge bridge =
                 new RequestToDataBridge(srcId, srcOut, sinkIn, hitList);
             bridge.setValidator(validator);
             bridge.start();
-
-            bridgeMap.put(srcId, bridge);
         }
 
-        return bridgeMap;
+        return idList;
     }
 
     private List<HitData> extractHits(int srcId, long firstTime, long lastTime)
@@ -105,26 +98,6 @@ public class RequestToDataBridge
         return list;
     }
 
-    public int getNumberDone()
-    {
-        return numDone;
-    }
-
-    public int getNumberEmpty()
-    {
-        return numEmpty;
-    }
-
-    public int getNumberReceived()
-    {
-        return numRcvd;
-    }
-
-    public int getNumberSent()
-    {
-        return numSent;
-    }
-
     private static List<ISourceID> getSourceIds(List<HitData> hitList)
     {
         HashMap<ISourceID, ISourceID> map = new HashMap<ISourceID, ISourceID>();
@@ -140,87 +113,7 @@ public class RequestToDataBridge
         return new ArrayList(map.keySet());
     }
 
-    private void sendHitRecordList(IReadoutRequest rReq)
-        throws IOException
-    {
-        if (rReq == null || rReq.getReadoutRequestElements() == null) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Ignoring empty rdoutReq " + rReq);
-            }
-            return;
-        }
-
-        numRcvd++;
-
-        final int baseLen = 28;
-
-        final int uid = rReq.getUID();
-
-        final int trigType = 0;
-        final int cfgId = 0;
-        final int trigMode = 0;
-
-        ByteBuffer buf = null;
-        for (Object obj : rReq.getReadoutRequestElements()) {
-            IReadoutRequestElement elem = (IReadoutRequestElement) obj;
-
-            final int srcId = elem.getSourceID().getSourceID();
-            final long firstTime = elem.getFirstTimeUTC().longValue();
-            final long lastTime = elem.getLastTimeUTC().longValue();
-
-            List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
-            if (dataHits.size() == 0) {
-                numEmpty++;
-                continue;
-            }
-
-            int hitLen = 0;
-            for (HitData hit : dataHits) {
-                hitLen += hit.getDeltaRecordLength();
-            }
-
-            final int bufLen = baseLen + hitLen;
-
-            if (buf == null || buf.capacity() < bufLen) {
-                buf = ByteBuffer.allocate(bufLen);
-            }
-
-            final int startPos = buf.position();
-
-            // envelope
-            buf.putInt(bufLen);
-            buf.putInt(PayloadRegistry.PAYLOAD_ID_HIT_RECORD_LIST);
-            buf.putLong(firstTime);
-
-            // readout data record
-            buf.putInt(uid);
-            buf.putInt(srcId);
-            buf.putInt(dataHits.size());
-
-            HitData.setDefaultTriggerType(trigType);
-            HitData.setDefaultConfigId(cfgId);
-            HitData.setDefaultTriggerMode(trigMode);
-
-            for (HitData hit : dataHits) {
-                hit.putDeltaRecord(buf, firstTime);
-            }
-
-            if (buf.position() != startPos + bufLen) {
-                throw new Error("Expected to put " + bufLen + " bytes, not " +
-                                (buf.position() - startPos));
-            }
-
-            buf.position(0);
-            buf.limit(bufLen);
-
-            super.write(buf);
-            numSent++;
-        }
-
-        numDone++;
-    }
-
-    private void sendReadoutData(IReadoutRequest rReq)
+    public void sendReadoutData(IReadoutRequest rReq)
         throws IOException
     {
         final int baseLen = 54;
@@ -237,8 +130,6 @@ public class RequestToDataBridge
             return;
         }
 
-        numRcvd++;
-
         ByteBuffer buf = null;
         for (Object obj : rReq.getReadoutRequestElements()) {
             IReadoutRequestElement elem = (IReadoutRequestElement) obj;
@@ -249,7 +140,6 @@ public class RequestToDataBridge
 
             List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
             if (dataHits.size() == 0) {
-                numEmpty++;
                 continue;
             }
 
@@ -272,7 +162,7 @@ public class RequestToDataBridge
             buf.putLong(firstTime);
 
             // readout data record
-            buf.putShort((short) 1);
+            buf.putShort((short) 0);
             buf.putInt(uid);
             buf.putShort(num);
             buf.putShort(isLast);
@@ -304,10 +194,7 @@ public class RequestToDataBridge
             buf.limit(bufLen);
 
             super.write(buf);
-            numSent++;
         }
-
-        numDone++;
     }
 
     public void sendStop()
@@ -320,7 +207,6 @@ public class RequestToDataBridge
         super.write(buf);
     }
 
-    @Override
     void write(ByteBuffer buf)
         throws IOException
     {
@@ -329,34 +215,30 @@ public class RequestToDataBridge
             sendStop();
         } else {
             if (factory == null) {
-                factory = new PayloadFactory(null);
+                factory = new MasterPayloadFactory();
             }
 
-            IPayload payload;
+            IWriteablePayload payload;
             try {
-                payload = factory.getPayload(buf, 0);
+                payload = factory.createPayload(0, buf, false);
                 if (payload == null) {
                     LOG.error("Couldn't create payload from " + buf.limit() +
                               "-byte buffer");
                 }
-            } catch (PayloadException ex) {
+            } catch (Exception ex) {
                 LOG.error("Couldn't validate byte buffer", ex);
                 payload = null;
             }
 
             if (payload != null) {
                 try {
-                    ((IPayload) payload).loadPayload();
+                    ((ILoadablePayload) payload).loadPayload();
                 } catch (Exception ex) {
                     LOG.error("Couldn't load payload", ex);
                     payload = null;
                 }
 
-                if (EventVersion.VERSION < 5) {
-                    sendReadoutData((IReadoutRequest) payload);
-                } else {
-                    sendHitRecordList((IReadoutRequest) payload);
-                }
+                sendReadoutData((IReadoutRequest) payload);
             }
         }
     }
