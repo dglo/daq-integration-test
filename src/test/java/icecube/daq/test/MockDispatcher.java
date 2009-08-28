@@ -1,6 +1,6 @@
 package icecube.daq.test;
 
-import icecube.daq.eventbuilder.IEventPayload;
+import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.Dispatcher;
 import icecube.daq.payload.IByteBufferCache;
@@ -42,16 +42,24 @@ public class MockDispatcher
     public void dispatchEvent(IWriteablePayload pay)
         throws DispatchException
     {
+        numSeen++;
+        if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
+            numBad++;
+        }
+
         ByteBuffer buf;
         if (bufMgr == null) {
-            buf = null;
+            buf = ByteBuffer.allocate(pay.getPayloadLength());
         } else {
             buf = bufMgr.acquireBuffer(pay.getPayloadLength());
         }
 
-        numSeen++;
-        if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
-            numBad++;
+        try {
+            pay.writePayload(false, 0, buf);
+        } catch (java.io.IOException ioe) {
+            System.err.println("Couldn't write payload " + pay);
+            ioe.printStackTrace();
+            buf = null;
         }
 
         if (bufMgr != null && buf != null) {

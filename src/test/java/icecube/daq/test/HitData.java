@@ -10,6 +10,7 @@ public class HitData
     static final int RAW_LENGTH = 38 + DATA_MAX_LENGTH;
     static final int SIMPLE_LENGTH = 38;
     static final int BASE_LENGTH = 58;
+    static final int BASE_RECORD_LENGTH = 20;
     static final int EXPANDED_LENGTH = 4;
 
     private static int defaultTrigType = -1;
@@ -47,6 +48,7 @@ public class HitData
 
     long getDOMID() { return domId; }
     int getDeltaLength() { return BASE_LENGTH + data.length; }
+    int getDeltaRecordLength() { return BASE_RECORD_LENGTH + data.length; }
     int getSourceID() { return srcId; }
     long getTime() { return time; }
 
@@ -100,6 +102,36 @@ public class HitData
         buf.putShort(version);
         buf.putShort(pedestal);
         buf.putLong(domclk);
+        buf.putInt(word0);
+        buf.putInt(word2);
+
+        buf.put(data);
+
+        if (buf.position() != startPos + payLen) {
+            throw new Error("Expected to put " + payLen + " bytes, not " +
+                            (buf.position() - startPos));
+        }
+    }
+
+    void putDeltaRecord(ByteBuffer buf, long baseTime)
+    {
+        final int startPos = buf.position();
+
+        final int payLen = BASE_RECORD_LENGTH + data.length;
+
+        // hit envelope
+        buf.putShort((short) payLen);
+        buf.put((byte) 1);
+        buf.put((byte) 0xff);
+        buf.putShort((short) 0xfedc);
+        buf.putInt((int) (time - baseTime));
+
+        final short pedestal = 123;
+        final long domclk = time;
+        final int word0 = 0x10000 + data.length + 12 + (trigMode << 18);
+        final int word2 = 12345;
+
+        buf.putShort(pedestal);
         buf.putInt(word0);
         buf.putInt(word2);
 

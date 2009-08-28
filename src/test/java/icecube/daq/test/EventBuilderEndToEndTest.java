@@ -6,27 +6,24 @@ import icecube.daq.eventBuilder.RequestPayloadOutputEngine;
 import icecube.daq.eventBuilder.SPDataAnalysis;
 import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
-import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.FileDispatcher;
-import icecube.daq.io.PayloadReader;
-import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayloadDestination;
 import icecube.daq.payload.IPayloadDestinationCollection;
 import icecube.daq.payload.IPayloadDestinationCollectionController;
+import icecube.daq.payload.IReadoutRequest;
+import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.IReadoutRequest;
-import icecube.daq.trigger.IReadoutRequestElement;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -54,7 +51,8 @@ public class EventBuilderEndToEndTest
     extends TestCase
 {
     private static final MockAppender appender =
-        new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
+        new MockAppender();
+        //new MockAppender(org.apache.log4j.Level.ALL).setVerbose(true);
 
     private static final int SIMHUB_ID =
         SourceIdRegistry.SIMULATION_HUB_SOURCE_ID;
@@ -165,15 +163,13 @@ public class EventBuilderEndToEndTest
                             long lastTime, int trigType, int srcId)
         throws IOException
     {
-        final int bufLen = 108;
+        final int bufLen = 104;
 
         if (trigBuf == null) {
             trigBuf = ByteBuffer.allocate(bufLen);
         }
 
         synchronized (trigBuf) {
-            final int recType =
-                RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
             final int uid = trigUID++;
 
             int cfgId = 0;
@@ -184,7 +180,7 @@ public class EventBuilderEndToEndTest
             trigBuf.putLong(8, firstTime);
 
             // trigger record
-            trigBuf.putShort(16, (short) recType);
+            trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
             trigBuf.putInt(18, uid);
             trigBuf.putInt(22, trigType);
             trigBuf.putInt(26, cfgId);
@@ -208,7 +204,7 @@ public class EventBuilderEndToEndTest
             // composite header
             trigBuf.putInt(96, 8);
             trigBuf.putShort(100, (short) 1);
-            trigBuf.putShort(104, (short) 0);
+            trigBuf.putShort(102, (short) 0);
 
             trigBuf.position(0);
             chan.write(trigBuf);

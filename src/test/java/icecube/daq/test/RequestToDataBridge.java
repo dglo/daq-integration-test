@@ -2,14 +2,14 @@ package icecube.daq.test;
 
 import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
+import icecube.daq.oldpayload.impl.MasterPayloadFactory;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IReadoutRequest;
+import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
-import icecube.daq.payload.MasterPayloadFactory;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.trigger.IReadoutRequest;
-import icecube.daq.trigger.IReadoutRequestElement;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -113,14 +113,12 @@ public class RequestToDataBridge
         return new ArrayList(map.keySet());
     }
 
-    public void sendReadoutData(IReadoutRequest rReq)
+    private void sendHitRecordList(IReadoutRequest rReq)
         throws IOException
     {
-        final int baseLen = 54;
+        final int baseLen = 28;
 
         final int uid = rReq.getUID();
-        final short num = nextNum++;
-        final short isLast = 1;
 
         final int trigType = 0;
         final int cfgId = 0;
@@ -145,7 +143,7 @@ public class RequestToDataBridge
 
             int hitLen = 0;
             for (HitData hit : dataHits) {
-                hitLen += hit.getDeltaLength();
+                hitLen += hit.getDeltaRecordLength();
             }
 
             final int bufLen = baseLen + hitLen;
@@ -158,31 +156,20 @@ public class RequestToDataBridge
 
             // envelope
             buf.putInt(bufLen);
-            buf.putInt(PayloadRegistry.PAYLOAD_ID_READOUT_DATA);
+            buf.putInt(PayloadRegistry.PAYLOAD_ID_HIT_RECORD_LIST);
             buf.putLong(firstTime);
 
             // readout data record
-            buf.putShort((short) 0);
             buf.putInt(uid);
-            buf.putShort(num);
-            buf.putShort(isLast);
             buf.putInt(srcId);
-            buf.putLong(firstTime);
-            buf.putLong(lastTime);
-
-            final int compHdrLen = 8;
-
-            // composite header
-            buf.putInt(bufLen - (baseLen - compHdrLen));
-            buf.putShort((short) 1);
-            buf.putShort((short) dataHits.size());
+            buf.putInt(dataHits.size());
 
             HitData.setDefaultTriggerType(trigType);
             HitData.setDefaultConfigId(cfgId);
             HitData.setDefaultTriggerMode(trigMode);
 
             for (HitData hit : dataHits) {
-                hit.putDelta(buf);
+                hit.putDeltaRecord(buf, firstTime);
             }
 
             if (buf.position() != startPos + bufLen) {
@@ -238,7 +225,7 @@ public class RequestToDataBridge
                     payload = null;
                 }
 
-                sendReadoutData((IReadoutRequest) payload);
+                sendHitRecordList((IReadoutRequest) payload);
             }
         }
     }

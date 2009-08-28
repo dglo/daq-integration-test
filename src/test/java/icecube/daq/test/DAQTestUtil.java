@@ -1,23 +1,19 @@
 package icecube.daq.test;
 
 import icecube.daq.eventBuilder.EBComponent;
-import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.MasterPayloadFactory;
-import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.component.AmandaTriggerComponent;
+import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
-import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
-import icecube.daq.trigger.impl.TriggerRequestPayloadFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -165,9 +161,8 @@ public final class DAQTestUtil
         assertTrue("EB Generic buffer cache is unused (" + ebGenCache + ")",
                    ebGenCache.getTotalBuffersAcquired() > 0);
 
-        // readouts are allocated twice
         assertEquals("Mismatch between readouts received and allocated",
-                     ebComp.getReadoutsReceived() * 2,
+                     ebComp.getReadoutsReceived(),
                      ebRDCache.getTotalBuffersAcquired());
 
         if (gtComp != null) checkTriggerCaches(gtComp, "Global trigger", debug);
@@ -175,10 +170,8 @@ public final class DAQTestUtil
         if (iiComp != null) checkTriggerCaches(iiComp, "In-ice trigger", debug);
         if (amComp != null) checkTriggerCaches(amComp, "Amanda trigger", debug);
 
-        // triggers are allocated when they're read in
-        // and again when they're copied into the event
         assertEquals("Mismatch between triggers sent and events sent",
-                     (gtComp.getPayloadsSent() - 1) * 2,
+                     (gtComp.getPayloadsSent() - 1),
                      ebGTCache.getTotalBuffersAcquired());
 
         for (int i = 0; shComps != null && i < shComps.length; i++) {
@@ -355,26 +348,6 @@ public final class DAQTestUtil
         }
 
         return sinkChannel;
-    }
-
-    public static ReadoutDataPayloadFactory
-        getReadoutDataFactory(MasterPayloadFactory factory)
-    {
-        final int payloadId =
-            PayloadRegistry.PAYLOAD_ID_READOUT_DATA;
-
-        return (ReadoutDataPayloadFactory)
-            factory.getPayloadFactory(payloadId);
-    }
-
-    public static TriggerRequestPayloadFactory
-        getTriggerRequestFactory(MasterPayloadFactory factory)
-    {
-        final int payloadId =
-            PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST;
-
-        return (TriggerRequestPayloadFactory)
-            factory.getPayloadFactory(payloadId);
     }
 
     public static void glueComponents(String name,

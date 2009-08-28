@@ -4,19 +4,19 @@ import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.splicer.StrandTail;
-import icecube.daq.trigger.IReadoutRequestElement;
-import icecube.daq.trigger.ITriggerRequestPayload;
 import icecube.daq.trigger.component.AmandaTriggerComponent;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
@@ -41,7 +41,8 @@ public class AmandaTriggerEndToEndTest
     extends TestCase
 {
     private static final MockAppender appender =
-        new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
+        //new MockAppender(org.apache.log4j.Level.ALL).setVerbose(true);
+        new MockAppender();
 
     private static final MockSourceID TRIGGER_SOURCE_ID =
         new MockSourceID(SourceIdRegistry.AMANDA_TRIGGER_SOURCE_ID);
@@ -120,8 +121,6 @@ public class AmandaTriggerEndToEndTest
         }
 
         synchronized (trigBuf) {
-            final int recType =
-                RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
             final int uid = trigUID++;
 
             int amCfgId = getAmandaConfigId(trigType);
@@ -133,7 +132,7 @@ public class AmandaTriggerEndToEndTest
             trigBuf.putInt(4, PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST);
             trigBuf.putLong(8, firstTime);
 
-            trigBuf.putShort(16, (short) recType);
+            trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
             trigBuf.putInt(18, uid);
             trigBuf.putInt(22, trigType);
             trigBuf.putInt(26, amCfgId);

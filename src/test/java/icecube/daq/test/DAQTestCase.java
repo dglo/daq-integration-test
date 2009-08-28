@@ -11,9 +11,8 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.sender.Sender;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
@@ -48,7 +47,8 @@ public abstract class DAQTestCase
     extends TestCase
 {
     private static final MockAppender appender =
-        new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
+        new MockAppender();
+        //new MockAppender(org.apache.log4j.Level.ALL).setVerbose(true);
 
     private static final int RUN_NUMBER = 1234;
 
@@ -487,6 +487,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
 
         // set up string hubs
         StringHubComponent[] shComps = buildStringHubComponents();
+        for (int i = 0; i < shComps.length; i++) {
+            shComps[i].setGlobalConfigurationDir(cfgFile.getParent());
+        }
 
         // check for required trigger components
         boolean needInIceTrig = false;
@@ -677,7 +680,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                      gtComp.getPayloadsSent() - 1,
                      monData.getNumTriggerRequestsReceived());
 
-        assertEquals("#trigger requests doesn't match # events",
+        assertEquals("#trigger requests doesn't match # events (" +
+                     monData.getNumTriggerRequestsQueued() + " TRs queued, " +
+                     monData.getNumEventsSent() + " evts sent)",
                      monData.getNumTriggerRequestsReceived(),
                      (monData.getNumTriggerRequestsQueued() +
                       monData.getNumEventsSent()));

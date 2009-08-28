@@ -1,8 +1,8 @@
 package icecube.daq.test;
 
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
-import icecube.daq.trigger.ITriggerRequestPayload;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

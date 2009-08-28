@@ -1,15 +1,14 @@
 package icecube.daq.test;
 
-import icecube.daq.io.PayloadDestinationOutputEngine;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
@@ -72,14 +71,11 @@ public class DAQInTheBoxTest
 
         ByteBuffer trigBuf = ByteBuffer.allocate(bufLen);
 
-        final int recType =
-            RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
-
         trigBuf.putInt(0, bufLen);
         trigBuf.putInt(4, PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST);
         trigBuf.putLong(8, firstTime);
 
-        trigBuf.putShort(16, (short) recType);
+        trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
         trigBuf.putInt(18, uid);
         trigBuf.putInt(22, trigType);
         trigBuf.putInt(26, cfgId);

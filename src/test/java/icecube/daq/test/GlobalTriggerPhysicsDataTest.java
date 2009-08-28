@@ -1,15 +1,15 @@
 package icecube.daq.test;
 
-import icecube.daq.eventbuilder.IEventPayload;
+import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.oldpayload.TriggerRegistry;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.trigger.ITriggerRequestPayload;
-import icecube.daq.trigger.TriggerRegistry;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 
 import java.io.File;

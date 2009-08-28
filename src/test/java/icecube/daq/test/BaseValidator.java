@@ -1,8 +1,9 @@
 package icecube.daq.test;
 
+import icecube.daq.payload.impl.PayloadFactory;
+import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
-import icecube.daq.payload.MasterPayloadFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -15,8 +16,8 @@ public abstract class BaseValidator
 {
     private static final Log LOG = LogFactory.getLog(BaseValidator.class);
 
-    private MasterPayloadFactory factory;
     private boolean foundInvalid;
+    private PayloadFactory factory;
 
     public boolean foundInvalid()
     {
@@ -68,21 +69,31 @@ public abstract class BaseValidator
         }
 
         if (factory == null) {
-            factory = new MasterPayloadFactory();
+            factory = new PayloadFactory(new MockBufferCache("Validator"));
         }
 
         IWriteablePayload payload;
         try {
-            payload = factory.createPayload(0, payBuf, false);
+            payload = factory.getPayload(payBuf, 0);
         } catch (Exception ex) {
-            LOG.error("Couldn't validate byte buffer", ex);
-            foundInvalid = false;
+            LOG.error("Couldn't create payload from byte buffer " + payBuf, ex);
+            foundInvalid = true;
+            return false;
+        }
+
+        try {
+            ((ILoadablePayload) payload).loadPayload();
+        } catch (Exception ex) {
+            LOG.error("Couldn't load payload " + payload, ex);
+            foundInvalid = true;
             return false;
         }
 
         boolean isValid = validate(payload);
 
         foundInvalid |= !isValid;
+
+        payload.recycle();
 
         return isValid;
     }
