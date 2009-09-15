@@ -492,6 +492,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         // check for required trigger components
+        boolean foundHub = false;
         boolean needInIceTrig = false;
         boolean needIceTopTrig = false;
         for (StringHubComponent shComp : shComps) {
@@ -500,9 +501,14 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                 needInIceTrig = true;
             } else if (SourceIdRegistry.isIcetopHubSourceID(srcId)) {
                 needIceTopTrig = true;
+            } else {
+                throw new Error("Cannot determine trigger for hub#" + srcId);
             }
+            foundHub = true;
         }
-        if (!needInIceTrig && !needIceTopTrig) {
+        if (!foundHub) {
+            throw new Error("No hubs found from " + cfgFile);
+        } else if (!needInIceTrig && !needIceTopTrig) {
             throw new Error("No icetop or in-ice hubs found");
         }
 
