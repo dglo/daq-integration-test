@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.EventVersion;
 import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.oldpayload.impl.MasterPayloadFactory;
@@ -184,6 +185,90 @@ public class RequestToDataBridge
         }
     }
 
+    public void sendReadoutData(IReadoutRequest rReq)
+        throws IOException
+    {
+        final int baseLen = 54;
+
+        final int uid = rReq.getUID();
+        final short num = nextNum++;
+        final short isLast = 1;
+
+        final int trigType = 0;
+        final int cfgId = 0;
+        final int trigMode = 0;
+
+        if (rReq == null || rReq.getReadoutRequestElements() == null) {
+            return;
+        }
+
+        ByteBuffer buf = null;
+        for (Object obj : rReq.getReadoutRequestElements()) {
+            IReadoutRequestElement elem = (IReadoutRequestElement) obj;
+
+            final int srcId = elem.getSourceID().getSourceID();
+            final long firstTime = elem.getFirstTimeUTC().longValue();
+            final long lastTime = elem.getLastTimeUTC().longValue();
+
+            List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
+            if (dataHits.size() == 0) {
+                continue;
+            }
+
+            int hitLen = 0;
+            for (HitData hit : dataHits) {
+                hitLen += hit.getDeltaLength();
+            }
+
+            final int bufLen = baseLen + hitLen;
+
+            if (buf == null || buf.capacity() < bufLen) {
+                buf = ByteBuffer.allocate(bufLen);
+            }
+
+            final int startPos = buf.position();
+
+            // envelope
+            buf.putInt(bufLen);
+            buf.putInt(PayloadRegistry.PAYLOAD_ID_READOUT_DATA);
+            buf.putLong(firstTime);
+
+            // readout data record
+            buf.putShort((short) 1);
+            buf.putInt(uid);
+            buf.putShort(num);
+            buf.putShort(isLast);
+            buf.putInt(srcId);
+            buf.putLong(firstTime);
+            buf.putLong(lastTime);
+
+            final int compHdrLen = 8;
+
+            // composite header
+            buf.putInt(bufLen - (baseLen - compHdrLen));
+            buf.putShort((short) 1);
+            buf.putShort((short) dataHits.size());
+
+            HitData.setDefaultTriggerType(trigType);
+            HitData.setDefaultConfigId(cfgId);
+            HitData.setDefaultTriggerMode(trigMode);
+
+            for (HitData hit : dataHits) {
+                hit.putDelta(buf);
+            }
+
+            if (buf.position() != startPos + bufLen) {
+                throw new Error("Expected to put " + bufLen + " bytes, not " +
+                                (buf.position() - startPos));
+            }
+
+            buf.position(0);
+            buf.limit(bufLen);
+
+            super.write(buf);
+        }
+    }
+
     public void sendStop()
         throws IOException
     {
@@ -225,7 +310,11 @@ public class RequestToDataBridge
                     payload = null;
                 }
 
-                sendHitRecordList((IReadoutRequest) payload);
+                if (EventVersion.VERSION < 5) {
+                    sendReadoutData((IReadoutRequest) payload);
+                } else {
+                    sendHitRecordList((IReadoutRequest) payload);
+                }
             }
         }
     }
