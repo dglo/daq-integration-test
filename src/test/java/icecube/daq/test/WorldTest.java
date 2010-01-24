@@ -65,6 +65,13 @@ public class WorldTest
 
     private static final int RUN_NUMBER = 1234;
 
+    private IniceTriggerComponent iiComp;
+    private AmandaTriggerComponent amComp;
+    private GlobalTriggerComponent gtComp;
+    private EBComponent ebComp;
+
+    private WritableByteChannel[] iiTails;
+    private WritableByteChannel[] amTails;
     public WorldTest(String name)
     {
         super(name);
@@ -2207,6 +2214,31 @@ public class WorldTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (ebComp != null) ebComp.closeAll();
+        if (gtComp != null) gtComp.closeAll();
+        if (amComp != null) amComp.closeAll();
+        if (iiComp != null) iiComp.closeAll();
+
+        if (iiTails != null) {
+            for (int i = 0; i < iiTails.length; i++) {
+                try {
+                    iiTails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
+        if (amTails != null) {
+            for (int i = 0; i < amTails.length; i++) {
+                try {
+                    amTails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -2229,7 +2261,7 @@ public class WorldTest
         PayloadValidator validator = new TriggerValidator();
 
         // set up event builder
-        EBComponent ebComp = new EBComponent(true);
+        ebComp = new EBComponent(true);
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
@@ -2241,7 +2273,7 @@ public class WorldTest
                                             hitList);
 
         // set up global trigger
-        GlobalTriggerComponent gtComp = new GlobalTriggerComponent();
+        gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
 
@@ -2254,7 +2286,7 @@ public class WorldTest
                                    ebComp.getTriggerCache());
 
         // set up in-ice trigger
-        IniceTriggerComponent iiComp = new IniceTriggerComponent();
+        iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
 
@@ -2265,13 +2297,12 @@ public class WorldTest
                                    validator,
                                    gtComp.getReader(), gtComp.getInputCache());
 
-        WritableByteChannel[] iiTails =
-            DAQTestUtil.connectToReader(iiComp.getReader(),
-                                        iiComp.getInputCache(), idList.size());
+        iiTails = DAQTestUtil.connectToReader(iiComp.getReader(),
+                                              iiComp.getInputCache(),
+                                              idList.size());
 
         // set up amanda trigger
-        AmandaTriggerComponent amComp =
-            new AmandaTriggerComponent("localhost", port);
+        amComp = new AmandaTriggerComponent("localhost", port);
         amComp.setGlobalConfigurationDir(cfgFile.getParent());
         amComp.start(false);
 
@@ -2296,7 +2327,7 @@ public class WorldTest
         DAQTestUtil.startIOProcess(amComp.getReader());
         DAQTestUtil.startIOProcess(amComp.getWriter());
 
-        WritableByteChannel[] amTails = new WritableByteChannel[] {
+        amTails = new WritableByteChannel[] {
             ServerUtil.acceptChannel(sel),
         };
 

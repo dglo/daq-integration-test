@@ -47,6 +47,9 @@ public class InIceTriggerEndToEndTest
     private static final long TIME_STEP =
         5000L / (long) (NUM_HITS_PER_TRIGGER + 1);
 
+    private IniceTriggerComponent comp;
+    private WritableByteChannel[] tails;
+
     private ByteBuffer hitBuf;
 
     public InIceTriggerEndToEndTest(String name)
@@ -140,6 +143,18 @@ public class InIceTriggerEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (comp != null) comp.closeAll();
+
+        if (tails != null) {
+            for (int i = 0; i < tails.length; i++) {
+                try {
+                    tails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -154,15 +169,14 @@ public class InIceTriggerEndToEndTest
                                         "sps-icecube-amanda-008");
 
         // set up in-ice trigger
-        IniceTriggerComponent comp = new IniceTriggerComponent();
+        comp = new IniceTriggerComponent();
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
 
-        WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
-                                        numTails);
+        tails = DAQTestUtil.connectToReader(comp.getReader(),
+                                            comp.getInputCache(), numTails);
 
         InIceValidator validator = new InIceValidator();
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),

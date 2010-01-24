@@ -52,6 +52,13 @@ public abstract class DAQTestCase
 
     private static final int RUN_NUMBER = 1234;
 
+    private StringHubComponent[] shComps;
+    private IniceTriggerComponent iiComp;
+    private IcetopTriggerComponent itComp;
+    private AmandaTriggerComponent amComp;
+    private GlobalTriggerComponent gtComp;
+    private EBComponent ebComp;
+
     public DAQTestCase(String name)
     {
         super(name);
@@ -470,6 +477,18 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (ebComp != null) ebComp.closeAll();
+        if (gtComp != null) gtComp.closeAll();
+        if (amComp != null) amComp.closeAll();
+        if (itComp != null) itComp.closeAll();
+        if (iiComp != null) iiComp.closeAll();
+
+        if (shComps != null) {
+            for (int i = 0; i < shComps.length; i++) {
+                shComps[i].closeAll();
+            }
+        }
+
         super.tearDown();
     }
 
@@ -486,7 +505,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         PayloadValidator validator = new GeneralValidator();
 
         // set up string hubs
-        StringHubComponent[] shComps = buildStringHubComponents();
+        shComps = buildStringHubComponents();
         for (int i = 0; i < shComps.length; i++) {
             shComps[i].setGlobalConfigurationDir(cfgFile.getParent());
         }
@@ -513,7 +532,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         // set up event builder
-        EBComponent ebComp = new EBComponent(true);
+        ebComp = new EBComponent(true);
 
         IByteBufferCache ebEvtCache =
             ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
@@ -525,7 +544,7 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
 
         // set up global trigger
-        GlobalTriggerComponent gtComp = new GlobalTriggerComponent();
+        gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
 
@@ -538,7 +557,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                                    ebComp.getTriggerCache());
 
         // set up icetop trigger
-        IcetopTriggerComponent itComp;
         if (!needIceTopTrig) {
             itComp = null;
         } else {
@@ -557,7 +575,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         // set up in-ice trigger
-        IniceTriggerComponent iiComp;
         if (!needInIceTrig) {
             iiComp = null;
         } else {
@@ -576,7 +593,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         Selector sel;
-        AmandaTriggerComponent amComp;
         if (!needAmandaTrig()) {
             sel = null;
             amComp = null;

@@ -64,6 +64,9 @@ public class GlobalTriggerEndToEndTest
     private static final MockAppender appender =
         new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
 
+    private GlobalTriggerComponent comp;
+    private WritableByteChannel[] tails;
+
     public GlobalTriggerEndToEndTest(String name)
     {
         super(name);
@@ -4733,6 +4736,18 @@ public class GlobalTriggerEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (comp != null) comp.closeAll();
+
+        if (tails != null) {
+            for (int i = 0; i < tails.length; i++) {
+                try {
+                    tails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -4747,15 +4762,14 @@ public class GlobalTriggerEndToEndTest
                                         "sps-icecube-amanda-008");
 
         // set up global trigger
-        GlobalTriggerComponent comp = new GlobalTriggerComponent();
+        comp = new GlobalTriggerComponent();
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
 
-        WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
-                                        numTails);
+        tails = DAQTestUtil.connectToReader(comp.getReader(),
+                                            comp.getInputCache(), numTails);
 
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(),

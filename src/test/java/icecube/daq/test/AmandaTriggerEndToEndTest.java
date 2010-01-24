@@ -52,6 +52,9 @@ public class AmandaTriggerEndToEndTest
     private static final long TIME_STEP =
         5000L / (long) (NUM_HITS_PER_TRIGGER + 1);
 
+    private AmandaTriggerComponent comp;
+    private WritableByteChannel[] tails;
+
     private ByteBuffer trigBuf;
     private int trigUID = 1;
 
@@ -176,6 +179,18 @@ public class AmandaTriggerEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (comp != null) comp.closeAll();
+
+        if (tails != null) {
+            for (int i = 0; i < tails.length; i++) {
+                try {
+                    tails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -196,8 +211,7 @@ public class AmandaTriggerEndToEndTest
                                         "sps-icecube-amanda-008");
 
         // set up amanda trigger
-        AmandaTriggerComponent comp =
-            new AmandaTriggerComponent("localhost", port);
+        comp = new AmandaTriggerComponent("localhost", port);
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
@@ -211,7 +225,7 @@ public class AmandaTriggerEndToEndTest
         DAQTestUtil.startIOProcess(comp.getReader());
         DAQTestUtil.startIOProcess(comp.getWriter());
 
-        WritableByteChannel[] tails = new WritableByteChannel[] {
+        tails = new WritableByteChannel[] {
             ServerUtil.acceptChannel(sel),
         };
 
