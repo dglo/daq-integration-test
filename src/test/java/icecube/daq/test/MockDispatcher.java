@@ -21,6 +21,12 @@ public class MockDispatcher
         this.bufMgr = bufMgr;
     }
 
+    public void close()
+        throws DispatchException
+    {
+        // do nothing
+    }
+
     public void dataBoundary()
         throws DispatchException
     {
