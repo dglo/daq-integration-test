@@ -7,6 +7,7 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class MockDispatcher
@@ -15,6 +16,8 @@ public class MockDispatcher
     private IByteBufferCache bufMgr;
     private int numSeen = 0;
     private int numBad = 0;
+    private int readOnlyTrigger = 0;
+    private boolean readOnly = false;
 
     public MockDispatcher(IByteBufferCache bufMgr)
     {
@@ -49,8 +52,17 @@ public class MockDispatcher
         throws DispatchException
     {
         numSeen++;
+        if (readOnlyTrigger > 0 && numSeen >= readOnlyTrigger) {
+            readOnly = true;
+        }
+
         if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
             numBad++;
+        }
+
+        if (readOnly) {
+            throw new DispatchException("Could not dispatch event",
+                                        new IOException("Read-only file system"));
         }
 
         ByteBuffer buf;
@@ -85,6 +97,16 @@ public class MockDispatcher
         throw new Error("Unimplemented");
     }
 
+    /**
+     * Get the byte buffer cache being used.
+     *
+     * @return byte buffer cache
+     */
+    public IByteBufferCache getByteBufferCache()
+    {
+        return bufMgr;
+    }
+
     public long getDiskAvailable()
     {
         return 0;
@@ -113,6 +135,21 @@ public class MockDispatcher
     public void setMaxFileSize(long x0)
     {
         throw new Error("Unimplemented");
+    }
+
+    public void setReadOnly(boolean readOnly)
+    {
+        this.readOnly = readOnly;
+    }
+
+    /**
+     * Trigger a read-only filesystem event after <tt>eventCount</tt> events.
+     *
+     * @param eventCount number of events needed to trigger a read-only filesystem
+     */
+    public void setReadOnlyTrigger(int eventCount)
+    {
+        this.readOnlyTrigger = eventCount;
     }
 
     public String toString()

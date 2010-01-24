@@ -117,6 +117,13 @@ public class RequestToDataBridge
     private void sendHitRecordList(IReadoutRequest rReq)
         throws IOException
     {
+        if (rReq == null || rReq.getReadoutRequestElements() == null) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Ignoring empty rdoutReq " + rReq);
+            }
+            return;
+        }
+
         final int baseLen = 28;
 
         final int uid = rReq.getUID();
@@ -124,10 +131,6 @@ public class RequestToDataBridge
         final int trigType = 0;
         final int cfgId = 0;
         final int trigMode = 0;
-
-        if (rReq == null || rReq.getReadoutRequestElements() == null) {
-            return;
-        }
 
         ByteBuffer buf = null;
         for (Object obj : rReq.getReadoutRequestElements()) {

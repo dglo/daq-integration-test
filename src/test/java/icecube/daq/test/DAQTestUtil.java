@@ -472,13 +472,24 @@ public final class DAQTestUtil
                                                String action,
                                                String extra)
     {
-        for (int i = 0; i < REPS &&
-                 ((proc != null && !proc.isStopped()) ||
-                  (splicer != null && splicer.getState() != Splicer.STOPPED));
-             i++)
+        waitUntilStopped(proc, splicer, action, "", REPS, SLEEP_TIME);
+    }
+
+    public static final void waitUntilStopped(DAQComponentIOProcess proc,
+                                              Splicer splicer,
+                                              String action,
+                                              String extra,
+                                              int maxReps, int sleepTime)
+    {
+        int numReps = 0;
+        while (numReps < maxReps &&
+               ((proc != null && !proc.isStopped()) ||
+                (splicer != null && splicer.getState() != Splicer.STOPPED)))
         {
+            numReps++;
+
             try {
-                Thread.sleep(SLEEP_TIME);
+                Thread.sleep(sleepTime);
             } catch (InterruptedException ie) {
                 // ignore interrupts
             }
@@ -490,7 +501,8 @@ public final class DAQTestUtil
         }
         if (splicer != null) {
             assertTrue("Splicer in " + splicer.getStateString() +
-                       ", not STOPPED after " + action + extra,
+                       ", not STOPPED after " + numReps + " reps of " + action +
+                       extra,
                        splicer.getState() == Splicer.STOPPED);
         }
     }
