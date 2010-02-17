@@ -279,6 +279,12 @@ public class GlobalTriggerPhysicsDataTest
             }
         }
 
+        for (int i = 0; i < prod.length; i++) {
+            if (prod[i].isRunning()) {
+                fail("Producer #" + i + " is still running");
+            }
+        }
+
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
