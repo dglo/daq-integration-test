@@ -146,6 +146,7 @@ public class WorldTest
                 !msg.startsWith("Resetting counter ") &&
                 !msg.startsWith("No match for timegate ") &&
                 !msg.startsWith("Sending empty event for window") &&
+                !msg.startsWith("Couldn't move temp file ") &&
                 !msg.endsWith("does not exist!  Using current directory."))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
