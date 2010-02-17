@@ -185,7 +185,6 @@ public final class DAQTestUtil
 //           assertTrue(name + " readout data buffer cache is unused (" +
 //                       shRDCache + ")",
 //                       shRDCache.getTotalBuffersAcquired() > 0);
- System.err.println(name + " readout data buffer is unused");
 
             IByteBufferCache shGenCache =
                 shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
