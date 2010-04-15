@@ -24,7 +24,10 @@ import icecube.daq.payload.impl.TriggerRequest;
 import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -34,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -102,7 +106,7 @@ public class EventBuilderEndToEndTest
         appender.clear();
     }
 
-    private List<HitData> getHitList()
+    private List<HitData> getHitList(IDOMRegistry domRegistry)
     {
         final long firstTime = TIME_BASE;
         final long timeRange = TRIG_STEP * NUM_TRIGGERS;
@@ -115,10 +119,24 @@ public class EventBuilderEndToEndTest
         HitData.setDefaultTriggerType(0);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(0);
+        HitData.setDOMRegistry(domRegistry);
+
+        Set<String> domSet = domRegistry.keys();
+        long[] domIdList = new long[domSet.size()];
+
+        int nextIdx = 0;
+        for (String mbStr : domSet) {
+            try {
+                domIdList[nextIdx++] = Long.parseLong(mbStr, 16);
+            } catch (NumberFormatException nfe) {
+                throw new Error("Bad mainboard ID \"" + mbStr + "\"");
+            }
+        }
 
         long time = TIME_BASE;
         for (int i = 0; i < numHits; i++) {
-            list.add(new HitData(time, SIMHUB_ID + (i % NUM_HUBS), (long) i));
+            long domId = domIdList[i % domIdList.length];
+            list.add(new HitData(time, SIMHUB_ID + (i % NUM_HUBS), domId));
 
             time += hitStep;
         }
@@ -239,12 +257,24 @@ public class EventBuilderEndToEndTest
     public void testEndToEnd()
         throws  DAQCompException, IOException
     {
-        List<HitData> hitList = getHitList();
+        File cfgFile =
+            DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
+                                        "default-dom-geometry.xml");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        List<HitData> hitList = getHitList(domRegistry);
 
         EBComponent comp = new EBComponent(true);
         comp.start(false);
         comp.setRunNumber(RUN_NUMBER);
         comp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        comp.setGlobalConfigurationDir(cfgFile.getParent());
 
         WritableByteChannel gtChan =
             DAQTestUtil.connectToReader(comp.getTriggerReader(),

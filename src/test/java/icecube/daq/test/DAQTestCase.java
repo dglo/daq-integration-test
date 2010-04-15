@@ -23,6 +23,8 @@ import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
 import java.io.IOException;
@@ -193,7 +195,7 @@ public abstract class DAQTestCase
 
     abstract int getNumberOfAmandaTriggerSent();
 
-    abstract void initialize()
+    abstract void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException;
 
     abstract void initializeAmandaInput(WritableByteChannel amTail)
@@ -496,11 +498,18 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
-        initialize();
-
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        initialize(domRegistry);
 
         PayloadValidator validator = new GeneralValidator();
 
@@ -542,6 +551,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+
+        ebComp.configuring(cfgFile.getName());
 
         // set up global trigger
         gtComp = new GlobalTriggerComponent();

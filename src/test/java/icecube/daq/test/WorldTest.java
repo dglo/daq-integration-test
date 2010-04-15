@@ -28,6 +28,8 @@ import icecube.daq.trigger.config.TriggerReadout;
 import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
 import java.io.IOException;
@@ -1664,7 +1666,7 @@ public class WorldTest
         return list;
     }
 
-    private static ArrayList<HitData> getInIceHits()
+    private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
@@ -1673,6 +1675,7 @@ public class WorldTest
         HitData.setDefaultTriggerType(2);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(2);
+        HitData.setDOMRegistry(domRegistry);
 
         list.add(new HitData(24014640657650675L, 12021, 0x6f242f105485L));
         list.add(new HitData(24014640657651927L, 12021, 0x423ed83846c3L));
@@ -2252,12 +2255,19 @@ public class WorldTest
 
         int port = ServerUtil.createServer(sel);
 
-        // get list of all hits
-        List<HitData> hitList = getInIceHits();
-
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        // get list of all hits
+        List<HitData> hitList = getInIceHits(domRegistry);
 
         PayloadValidator validator = new TriggerValidator();
 
@@ -2266,6 +2276,7 @@ public class WorldTest
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
 
         List<ISourceID> idList =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,

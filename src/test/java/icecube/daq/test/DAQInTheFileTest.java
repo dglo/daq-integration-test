@@ -12,6 +12,8 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.io.File;
@@ -75,7 +77,7 @@ public class DAQInTheFileTest
         return amInput.getNumberWritten();
     }
 
-    void initialize()
+    void initialize(IDOMRegistry domRegistry)
     {
         final String rawDataName = "raw_data";
         URL url = getClass().getResource("/" + rawDataName);

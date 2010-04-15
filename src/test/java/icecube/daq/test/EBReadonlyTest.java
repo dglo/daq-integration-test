@@ -27,6 +27,8 @@ import icecube.daq.trigger.config.TriggerReadout;
 import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +40,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
@@ -122,7 +125,7 @@ public class EBReadonlyTest
         appender.clear();
     }
 
-    private static ArrayList<HitData> getInIceHits()
+    private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
@@ -131,18 +134,32 @@ public class EBReadonlyTest
         HitData.setDefaultTriggerType(2);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(2);
+        HitData.setDOMRegistry(domRegistry);
 
         boolean useStatic = false;
         if (useStatic) {
             addStaticHits(list);
         } else {
-            addGeneratedHits(list);
+            Set<String> domSet = domRegistry.keys();
+            long[] domIdList = new long[domSet.size()];
+
+            int nextIdx = 0;
+            for (String mbStr : domSet) {
+                try {
+                    domIdList[nextIdx++] = Long.parseLong(mbStr, 16);
+                } catch (NumberFormatException nfe) {
+                    throw new Error("Bad mainboard ID \"" + mbStr + "\"");
+                }
+            }
+
+            addGeneratedHits(domIdList, list);
         }
 
         return list;
     }
 
-    private static ArrayList<HitData> addGeneratedHits(ArrayList<HitData> list)
+    private static ArrayList<HitData> addGeneratedHits(long[] domIdList,
+                                                       ArrayList<HitData> list)
     {
         final int numStrings = 19;
         final int numHits = 5000;
@@ -152,8 +169,7 @@ public class EBReadonlyTest
         long curTime = meanTime;
         for (int i = 0; i < numHits; i++) {
             int strNum = 12000 + rand.nextInt(numStrings) + 1;
-            int domId = strNum * 1000 + rand.nextInt(999);
-
+            long domId = domIdList[rand.nextInt(domIdList.length)];
 
             int pct = rand.nextInt(100);
 
@@ -745,12 +761,19 @@ public class EBReadonlyTest
     {
         final int numEventsBeforeReadOnly = 10;
 
-        // get list of all hits
-        List<HitData> hitList = getInIceHits();
-
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "in-ice-mbt-5");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        // get list of all hits
+        List<HitData> hitList = getInIceHits(domRegistry);
 
         PayloadValidator validator = new TriggerValidator();
 
@@ -759,6 +782,7 @@ public class EBReadonlyTest
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
 
         IByteBufferCache evtDataCache =
             ebComp.getDispatcher().getByteBufferCache();
@@ -837,14 +861,24 @@ public class EBReadonlyTest
         DAQTestUtil.sendStops(iiTails);
 
         DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
-                                     "IIStopMsg", "", 1000, 100);
-        DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIStopMsg");
+                                     "IIInStopMsg", "", 1000, 100);
+
+        iiComp.flush();
+
+        DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIOutStopMsg");
         DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
-                                     "GTStopMsg");
+                                     "GTInStopMsg");
+
+        gtComp.flush();
+
+        // NOTE: EB input is stopped due to read-only error
+        // so remaining output engines will not be stopped
+
         assertTrue("Expected GTOut to be running",
                    gtComp.getWriter().isRunning());
         DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
-                                     "EBStopMsg");
+                                     "EBTrigStopMsg");
+
         assertTrue("Expected EBReqOut to be running",
                    ebComp.getRequestWriter().isRunning());
         assertTrue("Expected EBDataIn to be running",
@@ -852,11 +886,8 @@ public class EBReadonlyTest
         assertTrue("Expected EBDataSplicer to be running",
                    ebComp.getDataSplicer().getState() == Splicer.STARTED);
 
-        iiComp.flush();
-        gtComp.flush();
-
         try {
-            Thread.sleep(10000);
+            Thread.sleep(1000);
         } catch (InterruptedException ie) {
             // ignore interrupts
         }
@@ -869,7 +900,7 @@ public class EBReadonlyTest
         assertTrue("GTOutCache does not have a backlog",
                    gtComp.getOutputCache().getCurrentAquiredBuffers() > 0);
 
-        System.err.println("XXX Ignoring extra log msgs");
+        // Ignore extra log msgs
         appender.clear();
     }
 

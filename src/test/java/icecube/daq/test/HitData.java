@@ -1,6 +1,8 @@
 package icecube.daq.test;
 
 import icecube.daq.payload.PayloadRegistry;
+import icecube.daq.payload.impl.DOMID;
+import icecube.daq.util.IDOMRegistry;
 
 import java.nio.ByteBuffer;
 
@@ -17,12 +19,15 @@ public class HitData
     private static int defaultCfgId = -1;
     private static int defaultTrigMode = -1;
 
+    private static IDOMRegistry domRegistry = null;
+
     private long time;
     private int trigType;
     private int cfgId;
     private int srcId;
     private long domId;
     private int trigMode;
+    private short chanId;
 
     private byte[] data = new byte[] {
         (byte) 0xff, (byte) 0xee, (byte) 0xdd,
@@ -38,12 +43,22 @@ public class HitData
     HitData(long time, int trigType, int cfgId, int srcId, long domId,
             int trigMode)
     {
+        if (domRegistry == null) {
+            throw new Error("DOM registry has not been set");
+        }
+
         this.time = time;
         this.trigType = trigType;
         this.cfgId = cfgId;
         this.srcId = srcId;
         this.domId = domId;
         this.trigMode = trigMode;
+
+        chanId = domRegistry.getChannelId(DOMID.toString(domId));
+        if (chanId < 0) {
+            throw new Error("Couldn't find channel ID for DOM " +
+                            DOMID.toString(domId));
+        }
     }
 
     long getDOMID() { return domId; }
@@ -119,11 +134,14 @@ public class HitData
 
         final int payLen = BASE_RECORD_LENGTH + data.length;
 
+        final byte recType = (byte) 1;
+        final byte flags = (byte) 0xff;
+
         // hit envelope
         buf.putShort((short) payLen);
-        buf.put((byte) 1);
-        buf.put((byte) 0xff);
-        buf.putShort((short) 0xfedc);
+        buf.put(recType);
+        buf.put(flags);
+        buf.putShort(chanId);
         buf.putInt((int) (time - baseTime));
 
         final short pedestal = 123;
@@ -171,7 +189,15 @@ public class HitData
         }
     }
 
+    static void setDOMRegistry(IDOMRegistry reg) { domRegistry = reg; }
     static void setDefaultTriggerType(int val) { defaultTrigType = val; }
     static void setDefaultConfigId(int val) { defaultCfgId = val; }
     static void setDefaultTriggerMode(int val) { defaultTrigMode = val; }
+
+    public String toString()
+    {
+        return "HitData[" + time + " cfg " + cfgId + " src " + srcId +
+            " dom " + Long.toHexString(domId) + " chan " + chanId +
+            " mode " + trigMode + "]";
+    }
 }

@@ -12,6 +12,8 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -1606,7 +1608,7 @@ public class DAQInTheBoxTest
         return list;
     }
 
-    private static ArrayList<HitData> getInIceHits()
+    private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
@@ -1615,6 +1617,7 @@ public class DAQInTheBoxTest
         HitData.setDefaultTriggerType(2);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(2);
+        HitData.setDOMRegistry(domRegistry);
 
         list.add(new HitData(24014640657650675L, 12021, 0x6f242f105485L));
         list.add(new HitData(24014640657651927L, 12021, 0x423ed83846c3L));
@@ -2141,10 +2144,10 @@ public class DAQInTheBoxTest
         return new ArrayList(map.keySet());
     }
 
-    void initialize()
+    void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
-        hitList = getInIceHits();
+        hitList = getInIceHits(domRegistry);
 
         idList = getSourceIds(hitList);
     }
