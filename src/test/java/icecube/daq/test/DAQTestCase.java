@@ -687,10 +687,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
                                      ebComp.getDataSplicer(), "EBStopMsg");
 
-        if (amComp != null) amComp.flush();
-        if (itComp != null) itComp.flush();
-        if (iiComp != null) iiComp.flush();
-        gtComp.flush();
+        while (ebComp.isBackEndRunning()) {
+            Thread.yield();
+        }
 
         try {
             Thread.sleep(1000);

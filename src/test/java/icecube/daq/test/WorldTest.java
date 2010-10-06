@@ -2389,9 +2389,9 @@ public class WorldTest
         DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
                                      ebComp.getDataSplicer(), "EBStopMsg");
 
-        amComp.flush();
-        iiComp.flush();
-        gtComp.flush();
+        while (ebComp.isBackEndRunning()) {
+            Thread.yield();
+        }
 
         try {
             Thread.sleep(1000);

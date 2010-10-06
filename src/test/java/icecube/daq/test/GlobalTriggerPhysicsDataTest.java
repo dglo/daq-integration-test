@@ -40,7 +40,7 @@ public class GlobalTriggerPhysicsDataTest
 {
     private static final MockAppender appender =
         //new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
-        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(true);
+        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(false);
 
     private static final MockSourceID globalTrigSrcId =
         new MockSourceID(SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID);
@@ -289,17 +289,15 @@ public class GlobalTriggerPhysicsDataTest
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
 
-        for (int i = 0; i < prod.length; i++) {
-            System.out.println(prod[i].getName() + " wrote " +
-                               prod[i].getNumberWritten());
-        }
-
-        comp.flush();
-
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ie) {
             // ignore interrupts
+        }
+
+        for (int i = 0; i < prod.length; i++) {
+            System.out.println(prod[i].getName() + " wrote " +
+                               prod[i].getNumberWritten());
         }
 
         int expEvents;
@@ -320,7 +318,7 @@ public class GlobalTriggerPhysicsDataTest
         } else {
             checkLogMessages();
         }
-    }    
+    }
 
     public static void main(String[] args)
     {

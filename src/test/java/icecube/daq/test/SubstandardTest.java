@@ -2281,10 +2281,6 @@ public class SubstandardTest
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
 
-        amComp.flush();
-        iiComp.flush();
-        gtComp.flush();
-
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ie) {
