@@ -117,6 +117,10 @@ public class MockDispatcher
         return 0;
     }
 
+    public long getNumBytesWritten() {
+	return 0;
+    }
+
     public int getNumberOfBadEvents()
     {
         return numBad;
