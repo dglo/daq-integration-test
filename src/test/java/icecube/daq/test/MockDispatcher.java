@@ -6,6 +6,7 @@ import icecube.daq.io.Dispatcher;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
+import icecube.daq.payload.PayloadException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -77,6 +78,10 @@ public class MockDispatcher
         } catch (java.io.IOException ioe) {
             System.err.println("Couldn't write payload " + pay);
             ioe.printStackTrace();
+            buf = null;
+        } catch (PayloadException pe) {
+            System.err.println("Couldn't write payload " + pay);
+            pe.printStackTrace();
             buf = null;
         }
 

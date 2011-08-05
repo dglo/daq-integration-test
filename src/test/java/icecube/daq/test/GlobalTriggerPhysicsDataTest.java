@@ -9,6 +9,7 @@ import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 
@@ -491,6 +492,9 @@ public class GlobalTriggerPhysicsDataTest
                 } catch (IOException ioe) {
                     LOG.error("Cannot write " + name + " payload #" +
                               numWritten, ioe);
+                } catch (PayloadException pe) {
+                    LOG.error("Cannot write " + name + " payload #" +
+                              numWritten, pe);
                 } finally {
                     numWritten++;
                 }
