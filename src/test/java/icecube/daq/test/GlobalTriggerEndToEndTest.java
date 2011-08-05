@@ -13,17 +13,15 @@ import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.splicer.SplicerException;
-import icecube.daq.trigger.ITriggerRequestPayload;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.trigger.impl.TriggerRequestPayloadFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +64,9 @@ public class GlobalTriggerEndToEndTest
     private static final MockAppender appender =
         new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
 
+    private GlobalTriggerComponent comp;
+    private WritableByteChannel[] tails;
+
     public GlobalTriggerEndToEndTest(String name)
     {
         super(name);
@@ -81,14 +82,11 @@ public class GlobalTriggerEndToEndTest
 
         ByteBuffer trigBuf = ByteBuffer.allocate(bufLen);
 
-        final int recType =
-            RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
-
         trigBuf.putInt(0, bufLen);
         trigBuf.putInt(4, PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST);
         trigBuf.putLong(8, firstTime);
 
-        trigBuf.putShort(16, (short) recType);
+        trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
         trigBuf.putInt(18, uid);
         trigBuf.putInt(22, trigType);
         trigBuf.putInt(26, cfgId);
@@ -4738,6 +4736,18 @@ public class GlobalTriggerEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (comp != null) comp.closeAll();
+
+        if (tails != null) {
+            for (int i = 0; i < tails.length; i++) {
+                try {
+                    tails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -4752,15 +4762,14 @@ public class GlobalTriggerEndToEndTest
                                         "sps-icecube-amanda-008");
 
         // set up global trigger
-        GlobalTriggerComponent comp = new GlobalTriggerComponent();
+        comp = new GlobalTriggerComponent();
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
 
-        WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
-                                        numTails);
+        tails = DAQTestUtil.connectToReader(comp.getReader(),
+                                            comp.getInputCache(), numTails);
 
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(),

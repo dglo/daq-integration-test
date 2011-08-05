@@ -1,6 +1,5 @@
 package icecube.daq.test;
 
-import icecube.daq.io.PayloadDestinationOutputEngine;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
@@ -8,12 +7,13 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.io.File;
@@ -77,7 +77,7 @@ public class DAQInTheFileTest
         return amInput.getNumberWritten();
     }
 
-    void initialize()
+    void initialize(IDOMRegistry domRegistry)
     {
         final String rawDataName = "raw_data";
         URL url = getClass().getResource("/" + rawDataName);

@@ -5,7 +5,6 @@ import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.SPDataAnalysis;
 import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
-import icecube.daq.eventbuilder.impl.ReadoutDataPayloadFactory;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
@@ -15,16 +14,13 @@ import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.splicer.StrandTail;
-import icecube.daq.trigger.IReadoutRequest;
-import icecube.daq.trigger.IReadoutRequestElement;
-import icecube.daq.trigger.ITriggerRequestPayload;
 import icecube.daq.trigger.component.AmandaTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
@@ -32,7 +28,8 @@ import icecube.daq.trigger.config.TriggerReadout;
 import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.trigger.impl.TriggerRequestPayloadFactory;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,6 +67,13 @@ public class WorldTest
 
     private static final int RUN_NUMBER = 1234;
 
+    private IniceTriggerComponent iiComp;
+    private AmandaTriggerComponent amComp;
+    private GlobalTriggerComponent gtComp;
+    private EBComponent ebComp;
+
+    private WritableByteChannel[] iiTails;
+    private WritableByteChannel[] amTails;
     public WorldTest(String name)
     {
         super(name);
@@ -108,14 +112,11 @@ public class WorldTest
 
         ByteBuffer trigBuf = ByteBuffer.allocate(bufLen);
 
-        final int recType =
-            RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
-
         trigBuf.putInt(0, bufLen);
         trigBuf.putInt(4, PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST);
         trigBuf.putLong(8, firstTime);
 
-        trigBuf.putShort(16, (short) recType);
+        trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
         trigBuf.putInt(18, uid);
         trigBuf.putInt(22, trigType);
         trigBuf.putInt(26, cfgId);
@@ -147,6 +148,7 @@ public class WorldTest
                 !msg.startsWith("Resetting counter ") &&
                 !msg.startsWith("No match for timegate ") &&
                 !msg.startsWith("Sending empty event for window") &&
+                !msg.startsWith("Couldn't move temp file ") &&
                 !msg.endsWith("does not exist!  Using current directory."))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
@@ -1664,7 +1666,7 @@ public class WorldTest
         return list;
     }
 
-    private static ArrayList<HitData> getInIceHits()
+    private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
@@ -1673,6 +1675,7 @@ public class WorldTest
         HitData.setDefaultTriggerType(2);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(2);
+        HitData.setDOMRegistry(domRegistry);
 
         list.add(new HitData(24014640657650675L, 12021, 0x6f242f105485L));
         list.add(new HitData(24014640657651927L, 12021, 0x423ed83846c3L));
@@ -2215,6 +2218,31 @@ public class WorldTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (ebComp != null) ebComp.closeAll();
+        if (gtComp != null) gtComp.closeAll();
+        if (amComp != null) amComp.closeAll();
+        if (iiComp != null) iiComp.closeAll();
+
+        if (iiTails != null) {
+            for (int i = 0; i < iiTails.length; i++) {
+                try {
+                    iiTails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
+        if (amTails != null) {
+            for (int i = 0; i < amTails.length; i++) {
+                try {
+                    amTails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -2227,20 +2255,28 @@ public class WorldTest
 
         int port = ServerUtil.createServer(sel);
 
-        // get list of all hits
-        List<HitData> hitList = getInIceHits();
-
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
 
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        // get list of all hits
+        List<HitData> hitList = getInIceHits(domRegistry);
+
         PayloadValidator validator = new TriggerValidator();
 
         // set up event builder
-        EBComponent ebComp = new EBComponent(true);
+        ebComp = new EBComponent(true);
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
 
         List<ISourceID> idList =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
@@ -2249,7 +2285,7 @@ public class WorldTest
                                             hitList);
 
         // set up global trigger
-        GlobalTriggerComponent gtComp = new GlobalTriggerComponent();
+        gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
 
@@ -2262,7 +2298,7 @@ public class WorldTest
                                    ebComp.getTriggerCache());
 
         // set up in-ice trigger
-        IniceTriggerComponent iiComp = new IniceTriggerComponent();
+        iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
 
@@ -2273,13 +2309,12 @@ public class WorldTest
                                    validator,
                                    gtComp.getReader(), gtComp.getInputCache());
 
-        WritableByteChannel[] iiTails =
-            DAQTestUtil.connectToReader(iiComp.getReader(),
-                                        iiComp.getInputCache(), idList.size());
+        iiTails = DAQTestUtil.connectToReader(iiComp.getReader(),
+                                              iiComp.getInputCache(),
+                                              idList.size());
 
         // set up amanda trigger
-        AmandaTriggerComponent amComp =
-            new AmandaTriggerComponent("localhost", port);
+        amComp = new AmandaTriggerComponent("localhost", port);
         amComp.setGlobalConfigurationDir(cfgFile.getParent());
         amComp.start(false);
 
@@ -2304,7 +2339,7 @@ public class WorldTest
         DAQTestUtil.startIOProcess(amComp.getReader());
         DAQTestUtil.startIOProcess(amComp.getWriter());
 
-        WritableByteChannel[] amTails = new WritableByteChannel[] {
+        amTails = new WritableByteChannel[] {
             ServerUtil.acceptChannel(sel),
         };
 
@@ -2354,9 +2389,9 @@ public class WorldTest
         DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
                                      ebComp.getDataSplicer(), "EBStopMsg");
 
-        amComp.flush();
-        iiComp.flush();
-        gtComp.flush();
+        while (ebComp.isBackEndRunning()) {
+            Thread.yield();
+        }
 
         try {
             Thread.sleep(1000);

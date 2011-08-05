@@ -62,16 +62,6 @@
     </dependency>
 
     <dependency>
-      <groupId>colt</groupId>
-      <artifactId>colt</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>jaxen</groupId>
-      <artifactId>jaxen</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>edu.wisc.icecube</groupId>
       <artifactId>StringHub</artifactId>
     </dependency>

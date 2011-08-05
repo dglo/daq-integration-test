@@ -4,15 +4,15 @@ import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.splicer.SplicerException;
-import icecube.daq.trigger.ITriggerRequestPayload;
 import icecube.daq.trigger.algorithm.AbstractTrigger;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.control.TriggerManager;
@@ -46,6 +46,9 @@ public class InIceTriggerEndToEndTest
     private static final long TIME_BASE = 100000L;
     private static final long TIME_STEP =
         5000L / (long) (NUM_HITS_PER_TRIGGER + 1);
+
+    private IniceTriggerComponent comp;
+    private WritableByteChannel[] tails;
 
     private ByteBuffer hitBuf;
 
@@ -140,6 +143,18 @@ public class InIceTriggerEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (comp != null) comp.closeAll();
+
+        if (tails != null) {
+            for (int i = 0; i < tails.length; i++) {
+                try {
+                    tails[i].close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+            }
+        }
+
         super.tearDown();
     }
 
@@ -154,15 +169,14 @@ public class InIceTriggerEndToEndTest
                                         "sps-icecube-amanda-008");
 
         // set up in-ice trigger
-        IniceTriggerComponent comp = new IniceTriggerComponent();
+        comp = new IniceTriggerComponent();
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
 
-        WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
-                                        numTails);
+        tails = DAQTestUtil.connectToReader(comp.getReader(),
+                                            comp.getInputCache(), numTails);
 
         InIceValidator validator = new InIceValidator();
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),

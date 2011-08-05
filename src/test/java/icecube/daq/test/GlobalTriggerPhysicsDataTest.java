@@ -1,15 +1,15 @@
 package icecube.daq.test;
 
-import icecube.daq.eventbuilder.IEventPayload;
+import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.oldpayload.TriggerRegistry;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
+import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.trigger.ITriggerRequestPayload;
-import icecube.daq.trigger.TriggerRegistry;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 
 import java.io.File;
@@ -40,7 +40,7 @@ public class GlobalTriggerPhysicsDataTest
 {
     private static final MockAppender appender =
         //new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
-        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(true);
+        new MockAppender(org.apache.log4j.Level.WARN).setVerbose(false);
 
     private static final MockSourceID globalTrigSrcId =
         new MockSourceID(SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID);
@@ -279,21 +279,25 @@ public class GlobalTriggerPhysicsDataTest
             }
         }
 
+        for (int i = 0; i < prod.length; i++) {
+            if (prod[i].isRunning()) {
+                fail("Producer #" + i + " is still running");
+            }
+        }
+
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
-
-        for (int i = 0; i < prod.length; i++) {
-            System.out.println(prod[i].getName() + " wrote " +
-                               prod[i].getNumberWritten());
-        }
-
-        comp.flush();
 
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ie) {
             // ignore interrupts
+        }
+
+        for (int i = 0; i < prod.length; i++) {
+            System.out.println(prod[i].getName() + " wrote " +
+                               prod[i].getNumberWritten());
         }
 
         int expEvents;
@@ -314,7 +318,7 @@ public class GlobalTriggerPhysicsDataTest
         } else {
             checkLogMessages();
         }
-    }    
+    }
 
     public static void main(String[] args)
     {

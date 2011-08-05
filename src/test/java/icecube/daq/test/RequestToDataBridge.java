@@ -1,15 +1,16 @@
 package icecube.daq.test;
 
+import icecube.daq.common.EventVersion;
 import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
+import icecube.daq.oldpayload.impl.MasterPayloadFactory;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IReadoutRequest;
+import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
-import icecube.daq.payload.MasterPayloadFactory;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.trigger.IReadoutRequest;
-import icecube.daq.trigger.IReadoutRequestElement;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -113,6 +114,80 @@ public class RequestToDataBridge
         return new ArrayList(map.keySet());
     }
 
+    private void sendHitRecordList(IReadoutRequest rReq)
+        throws IOException
+    {
+        if (rReq == null || rReq.getReadoutRequestElements() == null) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Ignoring empty rdoutReq " + rReq);
+            }
+            return;
+        }
+
+        final int baseLen = 28;
+
+        final int uid = rReq.getUID();
+
+        final int trigType = 0;
+        final int cfgId = 0;
+        final int trigMode = 0;
+
+        ByteBuffer buf = null;
+        for (Object obj : rReq.getReadoutRequestElements()) {
+            IReadoutRequestElement elem = (IReadoutRequestElement) obj;
+
+            final int srcId = elem.getSourceID().getSourceID();
+            final long firstTime = elem.getFirstTimeUTC().longValue();
+            final long lastTime = elem.getLastTimeUTC().longValue();
+
+            List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
+            if (dataHits.size() == 0) {
+                continue;
+            }
+
+            int hitLen = 0;
+            for (HitData hit : dataHits) {
+                hitLen += hit.getDeltaRecordLength();
+            }
+
+            final int bufLen = baseLen + hitLen;
+
+            if (buf == null || buf.capacity() < bufLen) {
+                buf = ByteBuffer.allocate(bufLen);
+            }
+
+            final int startPos = buf.position();
+
+            // envelope
+            buf.putInt(bufLen);
+            buf.putInt(PayloadRegistry.PAYLOAD_ID_HIT_RECORD_LIST);
+            buf.putLong(firstTime);
+
+            // readout data record
+            buf.putInt(uid);
+            buf.putInt(srcId);
+            buf.putInt(dataHits.size());
+
+            HitData.setDefaultTriggerType(trigType);
+            HitData.setDefaultConfigId(cfgId);
+            HitData.setDefaultTriggerMode(trigMode);
+
+            for (HitData hit : dataHits) {
+                hit.putDeltaRecord(buf, firstTime);
+            }
+
+            if (buf.position() != startPos + bufLen) {
+                throw new Error("Expected to put " + bufLen + " bytes, not " +
+                                (buf.position() - startPos));
+            }
+
+            buf.position(0);
+            buf.limit(bufLen);
+
+            super.write(buf);
+        }
+    }
+
     public void sendReadoutData(IReadoutRequest rReq)
         throws IOException
     {
@@ -162,7 +237,7 @@ public class RequestToDataBridge
             buf.putLong(firstTime);
 
             // readout data record
-            buf.putShort((short) 0);
+            buf.putShort((short) 1);
             buf.putInt(uid);
             buf.putShort(num);
             buf.putShort(isLast);
@@ -238,7 +313,11 @@ public class RequestToDataBridge
                     payload = null;
                 }
 
-                sendReadoutData((IReadoutRequest) payload);
+                if (EventVersion.VERSION < 5) {
+                    sendReadoutData((IReadoutRequest) payload);
+                } else {
+                    sendHitRecordList((IReadoutRequest) payload);
+                }
             }
         }
     }

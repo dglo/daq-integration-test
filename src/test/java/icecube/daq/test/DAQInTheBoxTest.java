@@ -1,18 +1,19 @@
 package icecube.daq.test;
 
-import icecube.daq.io.PayloadDestinationOutputEngine;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -72,14 +73,11 @@ public class DAQInTheBoxTest
 
         ByteBuffer trigBuf = ByteBuffer.allocate(bufLen);
 
-        final int recType =
-            RecordTypeRegistry.RECORD_TYPE_TRIGGER_REQUEST;
-
         trigBuf.putInt(0, bufLen);
         trigBuf.putInt(4, PayloadRegistry.PAYLOAD_ID_TRIGGER_REQUEST);
         trigBuf.putLong(8, firstTime);
 
-        trigBuf.putShort(16, (short) recType);
+        trigBuf.putShort(16, TriggerRequest.RECORD_TYPE);
         trigBuf.putInt(18, uid);
         trigBuf.putInt(22, trigType);
         trigBuf.putInt(26, cfgId);
@@ -1610,7 +1608,7 @@ public class DAQInTheBoxTest
         return list;
     }
 
-    private static ArrayList<HitData> getInIceHits()
+    private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
@@ -1619,6 +1617,7 @@ public class DAQInTheBoxTest
         HitData.setDefaultTriggerType(2);
         HitData.setDefaultConfigId(0);
         HitData.setDefaultTriggerMode(2);
+        HitData.setDOMRegistry(domRegistry);
 
         list.add(new HitData(24014640657650675L, 12021, 0x6f242f105485L));
         list.add(new HitData(24014640657651927L, 12021, 0x423ed83846c3L));
@@ -2145,10 +2144,10 @@ public class DAQInTheBoxTest
         return new ArrayList(map.keySet());
     }
 
-    void initialize()
+    void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException
     {
-        hitList = getInIceHits();
+        hitList = getInIceHits(domRegistry);
 
         idList = getSourceIds(hitList);
     }

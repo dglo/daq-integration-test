@@ -13,7 +13,7 @@ public abstract class PayloadConsumer
     private Thread thread;
     private int numWritten;
     private PayloadValidator validator;
-
+    private int limit;
 
     public PayloadConsumer(String inputName, ReadableByteChannel chanIn)
     {
@@ -106,6 +106,10 @@ public abstract class PayloadConsumer
             }
 
             numWritten++;
+
+            if (limit > 0 && numWritten > limit) {
+                break;
+            }
         }
 
         try {
@@ -129,6 +133,11 @@ public abstract class PayloadConsumer
         finishThreadCleanup();
 
         thread = null;
+    }
+
+    void setLimit(int limit)
+    {
+        this.limit = limit;
     }
 
     void setValidator(PayloadValidator validator)

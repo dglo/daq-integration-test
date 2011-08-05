@@ -1,12 +1,13 @@
 package icecube.daq.test;
 
-import icecube.daq.eventbuilder.IEventPayload;
+import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.Dispatcher;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class MockDispatcher
@@ -15,10 +16,18 @@ public class MockDispatcher
     private IByteBufferCache bufMgr;
     private int numSeen = 0;
     private int numBad = 0;
+    private int readOnlyTrigger = 0;
+    private boolean readOnly = false;
 
     public MockDispatcher(IByteBufferCache bufMgr)
     {
         this.bufMgr = bufMgr;
+    }
+
+    public void close()
+        throws DispatchException
+    {
+        // do nothing
     }
 
     public void dataBoundary()
@@ -42,16 +51,33 @@ public class MockDispatcher
     public void dispatchEvent(IWriteablePayload pay)
         throws DispatchException
     {
+        numSeen++;
+        if (readOnlyTrigger > 0 && numSeen >= readOnlyTrigger) {
+            readOnly = true;
+        }
+
+        if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
+            numBad++;
+        }
+
+        if (readOnly) {
+            throw new DispatchException("Could not dispatch event",
+                                        new IOException("Read-only file system"));
+        }
+
         ByteBuffer buf;
         if (bufMgr == null) {
-            buf = null;
+            buf = ByteBuffer.allocate(pay.getPayloadLength());
         } else {
             buf = bufMgr.acquireBuffer(pay.getPayloadLength());
         }
 
-        numSeen++;
-        if (!PayloadChecker.validateEvent((IEventPayload) pay, true)) {
-            numBad++;
+        try {
+            pay.writePayload(false, 0, buf);
+        } catch (java.io.IOException ioe) {
+            System.err.println("Couldn't write payload " + pay);
+            ioe.printStackTrace();
+            buf = null;
         }
 
         if (bufMgr != null && buf != null) {
@@ -71,6 +97,16 @@ public class MockDispatcher
         throw new Error("Unimplemented");
     }
 
+    /**
+     * Get the byte buffer cache being used.
+     *
+     * @return byte buffer cache
+     */
+    public IByteBufferCache getByteBufferCache()
+    {
+        return bufMgr;
+    }
+
     public long getDiskAvailable()
     {
         return 0;
@@ -79,6 +115,10 @@ public class MockDispatcher
     public long getDiskSize()
     {
         return 0;
+    }
+
+    public long getNumBytesWritten() {
+	return 0;
     }
 
     public int getNumberOfBadEvents()
@@ -99,6 +139,21 @@ public class MockDispatcher
     public void setMaxFileSize(long x0)
     {
         throw new Error("Unimplemented");
+    }
+
+    public void setReadOnly(boolean readOnly)
+    {
+        this.readOnly = readOnly;
+    }
+
+    /**
+     * Trigger a read-only filesystem event after <tt>eventCount</tt> events.
+     *
+     * @param eventCount number of events needed to trigger a read-only filesystem
+     */
+    public void setReadOnlyTrigger(int eventCount)
+    {
+        this.readOnlyTrigger = eventCount;
     }
 
     public String toString()

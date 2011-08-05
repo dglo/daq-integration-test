@@ -11,9 +11,8 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.RecordTypeRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.VitreousBufferCache;
+import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.sender.Sender;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
@@ -24,6 +23,8 @@ import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,9 +49,17 @@ public abstract class DAQTestCase
     extends TestCase
 {
     private static final MockAppender appender =
-        new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
+        new MockAppender();
+        //new MockAppender(org.apache.log4j.Level.ALL).setVerbose(true);
 
     private static final int RUN_NUMBER = 1234;
+
+    private StringHubComponent[] shComps;
+    private IniceTriggerComponent iiComp;
+    private IcetopTriggerComponent itComp;
+    private AmandaTriggerComponent amComp;
+    private GlobalTriggerComponent gtComp;
+    private EBComponent ebComp;
 
     public DAQTestCase(String name)
     {
@@ -186,7 +195,7 @@ public abstract class DAQTestCase
 
     abstract int getNumberOfAmandaTriggerSent();
 
-    abstract void initialize()
+    abstract void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException;
 
     abstract void initializeAmandaInput(WritableByteChannel amTail)
@@ -470,6 +479,18 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (ebComp != null) ebComp.closeAll();
+        if (gtComp != null) gtComp.closeAll();
+        if (amComp != null) amComp.closeAll();
+        if (itComp != null) itComp.closeAll();
+        if (iiComp != null) iiComp.closeAll();
+
+        if (shComps != null) {
+            for (int i = 0; i < shComps.length; i++) {
+                shComps[i].closeAll();
+            }
+        }
+
         super.tearDown();
     }
 
@@ -477,18 +498,29 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
-        initialize();
-
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
 
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        initialize(domRegistry);
+
         PayloadValidator validator = new GeneralValidator();
 
         // set up string hubs
-        StringHubComponent[] shComps = buildStringHubComponents();
+        shComps = buildStringHubComponents();
+        for (int i = 0; i < shComps.length; i++) {
+            shComps[i].setGlobalConfigurationDir(cfgFile.getParent());
+        }
 
         // check for required trigger components
+        boolean foundHub = false;
         boolean needInIceTrig = false;
         boolean needIceTopTrig = false;
         for (StringHubComponent shComp : shComps) {
@@ -497,14 +529,19 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                 needInIceTrig = true;
             } else if (SourceIdRegistry.isIcetopHubSourceID(srcId)) {
                 needIceTopTrig = true;
+            } else {
+                throw new Error("Cannot determine trigger for hub#" + srcId);
             }
+            foundHub = true;
         }
-        if (!needInIceTrig && !needIceTopTrig) {
+        if (!foundHub) {
+            throw new Error("No hubs found from " + cfgFile);
+        } else if (!needInIceTrig && !needIceTopTrig) {
             throw new Error("No icetop or in-ice hubs found");
         }
 
         // set up event builder
-        EBComponent ebComp = new EBComponent(true);
+        ebComp = new EBComponent(true);
 
         IByteBufferCache ebEvtCache =
             ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
@@ -514,9 +551,12 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         ebComp.start(false);
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+
+        ebComp.configuring(cfgFile.getName());
 
         // set up global trigger
-        GlobalTriggerComponent gtComp = new GlobalTriggerComponent();
+        gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
 
@@ -529,7 +569,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                                    ebComp.getTriggerCache());
 
         // set up icetop trigger
-        IcetopTriggerComponent itComp;
         if (!needIceTopTrig) {
             itComp = null;
         } else {
@@ -548,7 +587,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         // set up in-ice trigger
-        IniceTriggerComponent iiComp;
         if (!needInIceTrig) {
             iiComp = null;
         } else {
@@ -567,7 +605,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         Selector sel;
-        AmandaTriggerComponent amComp;
         if (!needAmandaTrig()) {
             sel = null;
             amComp = null;
@@ -650,10 +687,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
                                      ebComp.getDataSplicer(), "EBStopMsg");
 
-        if (amComp != null) amComp.flush();
-        if (itComp != null) itComp.flush();
-        if (iiComp != null) iiComp.flush();
-        gtComp.flush();
+        while (ebComp.isBackEndRunning()) {
+            Thread.yield();
+        }
 
         try {
             Thread.sleep(1000);
@@ -677,7 +713,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                      gtComp.getPayloadsSent() - 1,
                      monData.getNumTriggerRequestsReceived());
 
-        assertEquals("#trigger requests doesn't match # events",
+        assertEquals("#trigger requests doesn't match # events (" +
+                     monData.getNumTriggerRequestsQueued() + " TRs queued, " +
+                     monData.getNumEventsSent() + " evts sent)",
                      monData.getNumTriggerRequestsReceived(),
                      (monData.getNumTriggerRequestsQueued() +
                       monData.getNumEventsSent()));
