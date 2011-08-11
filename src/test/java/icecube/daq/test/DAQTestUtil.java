@@ -340,7 +340,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData("rdrSrc", sourceChannel));
         sourceChannel.configureBlocking(false);
 
-        rdr.addDataChannel(sourceChannel, cache, 1024);
+        rdr.addDataChannel(sourceChannel, "rdrSink", cache, 1024);
 
         if (startReader) {
             startIOProcess(rdr);
@@ -386,7 +386,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name + "*IN", srcIn));
         srcIn.configureBlocking(false);
 
-        in.addDataChannel(srcIn, inCache, 1024);
+        in.addDataChannel(srcIn, "glueChan", inCache, 1024);
 
         if (startIn) {
             startIOProcess(in);

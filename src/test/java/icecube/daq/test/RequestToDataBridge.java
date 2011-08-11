@@ -73,7 +73,7 @@ public class RequestToDataBridge
             Pipe.SourceChannel srcIn = inPipe.source();
             srcIn.configureBlocking(false);
 
-            dataIn.addDataChannel(srcIn, dataCache, 1024);
+            dataIn.addDataChannel(srcIn, "r2dbChan", dataCache, 1024);
 
             RequestToDataBridge bridge =
                 new RequestToDataBridge(srcId, srcOut, sinkIn, hitList);
