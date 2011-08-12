@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
@@ -2278,11 +2279,13 @@ public class WorldTest
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
 
-        List<ISourceID> idList =
+        Map<ISourceID, RequestToDataBridge> bridgeMap =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
                                             ebComp.getDataReader(),
                                             ebComp.getDataCache(),
                                             hitList);
+
+        List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
 
         // set up global trigger
         gtComp = new GlobalTriggerComponent();

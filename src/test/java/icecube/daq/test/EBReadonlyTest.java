@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.zip.DataFormatException;
@@ -791,11 +792,13 @@ public class EBReadonlyTest
 
         disp.setReadOnlyTrigger(numEventsBeforeReadOnly);
 
-        List<ISourceID> idList =
+        Map<ISourceID, RequestToDataBridge> bridgeMap =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
                                             ebComp.getDataReader(),
                                             ebComp.getDataCache(),
                                             hitList);
+
+        List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
 
         // set up global trigger
         gtComp = new GlobalTriggerComponent();
