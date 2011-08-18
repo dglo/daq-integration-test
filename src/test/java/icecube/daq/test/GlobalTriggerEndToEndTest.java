@@ -4791,8 +4791,6 @@ public class GlobalTriggerEndToEndTest
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
 
-        comp.flush();
-
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ie) {

@@ -55,8 +55,6 @@ class ActivityMonitor
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
 
-    private Map<ISourceID, RequestToDataBridge> bridgeMap;
-
     private long iiSent;
     private long gtSent;
     private long reqRcvd;
@@ -73,13 +71,46 @@ class ActivityMonitor
         this.ebComp = ebComp;
     }
 
-    void setBridgeMap(Map<ISourceID, RequestToDataBridge> bridgeMap)
+    private void dumpProgress(int rep, int expEvents, boolean dumpSplicers)
     {
-        this.bridgeMap = bridgeMap;
+        long iiRcvd = iiComp.getPayloadsReceived();
+        long gtRcvd = gtComp.getPayloadsReceived();
+
+        String outStr =
+            String.format("#%d: II %d->%d GT %d->%d EB %d->%d->%d->%d",
+                          rep, iiRcvd, iiSent, gtRcvd, gtSent, reqRcvd,
+                          reqSent, dataRcvd, evtsSent);
+        System.err.println(outStr);
+
+        if (dumpSplicers && iiSent < expEvents + 1) {
+            dumpSplicer("II", iiComp.getSplicer());
+        }
+
+        if (dumpSplicers && gtSent < iiSent) {
+            dumpSplicer("GT", gtComp.getSplicer());
+        }
+
+        if (dumpSplicers && evtsSent + 1 < gtSent) {
+            dumpSplicer("EB", ebComp.getDataSplicer());
+        }
     }
 
-    boolean waitForStasis(int staticReps, int maxReps, boolean verbose)
+    private void dumpSplicer(String title, Splicer splicer)
     {
+        System.err.println("*********************");
+        System.err.println("*** " + title + " Splicer");
+        System.err.println("*********************");
+        String[] desc = ((HKN1Splicer) splicer).dumpDescription();
+        for (int d = 0; d < desc.length; d++) {
+            System.err.println("  " + desc[d]);
+        }
+    }
+
+    boolean waitForStasis(int staticReps, int maxReps, int expEvents,
+                          boolean verbose)
+    {
+        final int SLEEP_MSEC = 100;
+
         int numStatic = 0;
         for (int i = 0; i < maxReps; i++) {
             boolean changed = false;
@@ -116,65 +147,7 @@ class ActivityMonitor
             }
 
             if (verbose) {
-                long iiRcvd = iiComp.getPayloadsReceived();
-                long gtRcvd = gtComp.getPayloadsReceived();
-                String outStr =
-                    String.format("#%d: II %d->%d GT %d->%d EB %d->%d->%d->%d",
-                                  i, iiRcvd, iiSent, gtRcvd, gtSent, reqRcvd,
-                                  reqSent, dataRcvd, evtsSent);
-                System.err.println(outStr);
-
-                if (bridgeMap != null) {
-                    for (ISourceID srcId : bridgeMap.keySet()) {
-                        RequestToDataBridge r2db = bridgeMap.get(srcId);
-
-                        final long r2Rcvd = r2db.getNumberReceived();
-                        final long r2Sent = r2db.getNumberSent();
-                        final long r2Done = r2db.getNumberDone();
-                        final long r2Empty = r2db.getNumberEmpty();
-
-                        String emptyStr;
-                        if (r2Empty == 0) {
-                            emptyStr = "";
-                        } else {
-                            emptyStr = " (!" + r2Empty + ")";
-                        }
-
-                        String doneStr;
-                        if (r2Done == r2Sent) {
-                            doneStr = "";
-                        } else {
-                            doneStr = " == " + r2Done;
-                        }
-
-                        if (r2Rcvd < gtSent || r2Rcvd != r2Sent ||
-                            r2Sent != r2Done)
-                        {
-                            System.err.println("  BM-" + srcId + ": " +
-                                               r2Rcvd + "->" + r2Sent +
-                                               emptyStr + doneStr);
-                        }
-                    }
-
-                    SpliceablePayloadReader rdr = ebComp.getDataReader();
-                    Long[] recs = rdr.getRecordsReceived();
-                    Long[] stops = rdr.getStopMessagesReceived();
-                    for (int c = 0; c < recs.length; c++) {
-                        String stopStr;
-                        if (stops[c] == 0) {
-                            stopStr = "";
-                        } else {
-                            stopStr = " (" + stops[c] + " stops)";
-                        }
-
-                        if (recs[c].longValue() != gtSent ||
-                            stopStr.length() > 0)
-                        {
-                            System.err.println("  Chan#" + c + ": " + recs[c] +
-                                               stopStr);
-                        }
-                    }
-                }
+                dumpProgress(i, expEvents, false);
             }
 
             if (numStatic >= staticReps) {
@@ -182,7 +155,7 @@ class ActivityMonitor
             }
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(SLEEP_MSEC);
             } catch (Throwable thr) {
                 // ignore errors
             }
@@ -413,16 +386,7 @@ public class WorldTest
             if (buf.length() > 0) buf.append(' ');
             buf.append("EvtsSent ").append(be.getNumEventsSent());
         }
-        System.err.println("** BackEnd: " + buf);
-
-        if (true) {
-            System.err.println("** Splicer");
-            HKN1Splicer splicer = (HKN1Splicer) ebComp.getDataSplicer();
-            String[] desc = splicer.dumpDescription();
-            for (int i = 0; i < desc.length; i++) {
-                System.err.println("  " + desc[i]);
-            }
-        }
+        if (buf.length() > 0) System.err.println("** BackEnd: " + buf);
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry,
@@ -538,8 +502,9 @@ public class WorldTest
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
-        final int numEvents = 100;
+        final int numEvents = 20;
         final boolean dumpActivity = false;
+        final boolean dumpBEStats = false;
 
         Selector sel = Selector.open();
 
@@ -638,10 +603,9 @@ public class WorldTest
         }
 
         ActivityMonitor activity = new ActivityMonitor(iiComp, gtComp, ebComp);
-        activity.setBridgeMap(bridgeMap);
-        activity.waitForStasis(3, 500, dumpActivity);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity);
 
-        //dumpBackEndStats();
+        if (dumpBEStats) dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",
                      numEvents - 1, iiComp.getPayloadsSent());
@@ -650,7 +614,7 @@ public class WorldTest
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(3, 500, dumpActivity);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity);
 
         DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
                                      "IIStopMsg");
@@ -669,9 +633,9 @@ public class WorldTest
             Thread.yield();
         }
 
-        activity.waitForStasis(3, 10, dumpActivity);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity);
 
-        //dumpBackEndStats();
+        if (dumpBEStats) dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",
                      numEvents + 1, iiComp.getPayloadsSent());

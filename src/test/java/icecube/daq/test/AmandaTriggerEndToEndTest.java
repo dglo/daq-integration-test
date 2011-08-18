@@ -237,8 +237,6 @@ public class AmandaTriggerEndToEndTest
                                      "AMStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "AMStopMsg");
 
-        comp.flush();
-
         assertEquals("Bad number of payloads written",
                      numObjs, comp.getPayloadsSent());
 

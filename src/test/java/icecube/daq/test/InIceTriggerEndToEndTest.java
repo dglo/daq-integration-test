@@ -193,8 +193,6 @@ public class InIceTriggerEndToEndTest
                                      "IIStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "IIStopMsg");
 
-        comp.flush();
-
         assertEquals("Bad number of payloads written",
                      numObjs / NUM_HITS_PER_TRIGGER,
                      comp.getPayloadsSent() - 1);
