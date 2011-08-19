@@ -72,6 +72,8 @@ public class EventBuilderEndToEndTest
 
     private static ByteBuffer trigBuf;
 
+    private Pipe gtPipe;
+
     /**
      * Test event builder.
      *
@@ -251,6 +253,19 @@ public class EventBuilderEndToEndTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (gtPipe != null) {
+            try {
+                gtPipe.sink().close();
+            } catch (IOException ioe) {
+                // ignore errors
+            }
+            try {
+                gtPipe.source().close();
+            } catch (IOException ioe) {
+                // ignore errors
+            }
+        }
+
         super.tearDown();
     }
 
@@ -276,9 +291,8 @@ public class EventBuilderEndToEndTest
         comp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         comp.setGlobalConfigurationDir(cfgFile.getParent());
 
-        WritableByteChannel gtChan =
-            DAQTestUtil.connectToReader(comp.getTriggerReader(),
-                                        comp.getTriggerCache());
+        gtPipe = DAQTestUtil.connectToReader(comp.getTriggerReader(),
+                                             comp.getTriggerCache());
 
         RequestToDataBridge.createLinks(comp.getRequestWriter(), null,
                                         comp.getDataReader(),
@@ -288,7 +302,7 @@ public class EventBuilderEndToEndTest
         DAQTestUtil.startIOProcess(comp.getRequestWriter());
         DAQTestUtil.startIOProcess(comp.getDataReader());
 
-        sendGlobalTriggers(gtChan);
+        sendGlobalTriggers(gtPipe.sink());
 
         try {
             Thread.sleep(1000);
@@ -296,7 +310,7 @@ public class EventBuilderEndToEndTest
             // ignore interrupts
         }
 
-        DAQTestUtil.sendStopMsg(gtChan);
+        DAQTestUtil.sendStopMsg(gtPipe.sink());
 
         DAQTestUtil.waitUntilStopped(comp.getTriggerReader(), null,
                                      "EBStopMsg");

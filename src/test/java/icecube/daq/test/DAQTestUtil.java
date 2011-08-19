@@ -53,6 +53,11 @@ class ChannelData
     {
         if (chan.isOpen()) {
             LOG.error(toString() + " has not been closed");
+            try {
+                chan.close();
+            } catch (IOException ioe) {
+                // ignore errors
+            }
         }
     }
 
@@ -252,10 +257,19 @@ public final class DAQTestUtil
         chanData.clear();
     }
 
-    public static final void logOpenChannels()
+    public static final void closePipeList(Pipe[] list)
     {
-        for (ChannelData cd : chanData) {
-            cd.logOpen();
+        for (int i = 0; i < list.length; i++) {
+            try {
+                list[i].sink().close();
+            } catch (IOException ioe) {
+                // ignore errors on close
+            }
+            try {
+                list[i].source().close();
+            } catch (IOException ioe) {
+                // ignore errors on close
+            }
         }
     }
 
@@ -291,28 +305,28 @@ public final class DAQTestUtil
         return consumer;
     }
 
-    public static WritableByteChannel connectToReader(PayloadReader rdr,
-                                                      IByteBufferCache cache)
+    public static Pipe connectToReader(PayloadReader rdr,
+                                       IByteBufferCache cache)
         throws IOException
     {
         return connectToReader(rdr, cache, true);
     }
 
-    public static WritableByteChannel[] connectToReader(PayloadReader rdr,
-                                                        IByteBufferCache cache,
-                                                        int numTails)
+    public static Pipe[] connectToReader(PayloadReader rdr,
+                                         IByteBufferCache cache,
+                                         int numTails)
         throws IOException
     {
         return connectToReader(rdr, cache, numTails, true);
     }
 
-    public static WritableByteChannel[] connectToReader(PayloadReader rdr,
-                                                        IByteBufferCache cache,
-                                                        int numTails,
-                                                        boolean startReader)
+    public static Pipe[] connectToReader(PayloadReader rdr,
+                                         IByteBufferCache cache,
+                                         int numTails,
+                                         boolean startReader)
         throws IOException
     {
-        WritableByteChannel[] chanList = new WritableByteChannel[numTails];
+        Pipe[] chanList = new Pipe[numTails];
 
         for (int i = 0; i < chanList.length; i++) {
             chanList[i] = connectToReader(rdr, cache, false);
@@ -325,9 +339,9 @@ public final class DAQTestUtil
         return chanList;
     }
 
-    public static WritableByteChannel connectToReader(PayloadReader rdr,
-                                                      IByteBufferCache cache,
-                                                      boolean startReader)
+    public static Pipe connectToReader(PayloadReader rdr,
+                                       IByteBufferCache cache,
+                                       boolean startReader)
         throws IOException
     {
         Pipe testPipe = Pipe.open();
@@ -346,7 +360,7 @@ public final class DAQTestUtil
             startIOProcess(rdr);
         }
 
-        return sinkChannel;
+        return testPipe;
     }
 
     public static void glueComponents(String name,
@@ -408,6 +422,13 @@ public final class DAQTestUtil
         }
     }
 
+    public static final void logOpenChannels()
+    {
+        for (ChannelData cd : chanData) {
+            cd.logOpen();
+        }
+    }
+
     public static void sendStopMsg(WritableByteChannel chan)
         throws IOException
     {
@@ -423,11 +444,11 @@ public final class DAQTestUtil
         }
     }
 
-    public static void sendStops(WritableByteChannel[] tails)
+    public static void sendStops(Pipe[] tails)
         throws IOException
     {
         for (int i = 0; i < tails.length; i++) {
-            sendStopMsg(tails[i]);
+            sendStopMsg(tails[i].sink());
         }
     }
 

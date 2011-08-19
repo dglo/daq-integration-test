@@ -27,7 +27,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.zip.DataFormatException;
 
@@ -65,7 +64,7 @@ public class GlobalTriggerEndToEndTest
         new MockAppender(/*org.apache.log4j.Level.ALL*/)/*.setVerbose(true)*/;
 
     private GlobalTriggerComponent comp;
-    private WritableByteChannel[] tails;
+    private Pipe[] tails;
 
     public GlobalTriggerEndToEndTest(String name)
     {
@@ -4739,13 +4738,7 @@ public class GlobalTriggerEndToEndTest
         if (comp != null) comp.closeAll();
 
         if (tails != null) {
-            for (int i = 0; i < tails.length; i++) {
-                try {
-                    tails[i].close();
-                } catch (IOException ioe) {
-                    // ignore errors on close
-                }
-            }
+            DAQTestUtil.closePipeList(tails);
         }
 
         super.tearDown();
@@ -4780,12 +4773,10 @@ public class GlobalTriggerEndToEndTest
 
         for (ByteBuffer bb : getTriggerList()) {
             bb.position(0);
-            tails[0].write(bb);
+            tails[0].sink().write(bb);
         }
 
-        for (int i = 0; i < tails.length; i++) {
-            DAQTestUtil.sendStopMsg(tails[i]);
-        }
+        DAQTestUtil.sendStops(tails);
 
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "GTStopMsg");

@@ -7,9 +7,28 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
-public final class ServerUtil
+public final class MinimalServer
 {
-    public static SocketChannel acceptChannel(Selector sel)
+    private Selector sel;
+    private ServerSocketChannel ssChan;
+    private int port;
+
+    public MinimalServer()
+        throws IOException
+    {
+        ssChan = ServerSocketChannel.open();
+        ssChan.configureBlocking(false);
+        ssChan.socket().setReuseAddress(true);
+
+        ssChan.socket().bind(null);
+
+        sel = Selector.open();
+        ssChan.register(sel, SelectionKey.OP_ACCEPT);
+
+        port = ssChan.socket().getLocalPort();
+    }
+
+    public SocketChannel acceptChannel()
         throws IOException
     {
         SocketChannel chan = null;
@@ -50,17 +69,30 @@ public final class ServerUtil
         return chan;
     }
 
-    public static int createServer(Selector sel)
+    public void close()
         throws IOException
     {
-        ServerSocketChannel ssChan = ServerSocketChannel.open();
-        ssChan.configureBlocking(false);
-        ssChan.socket().setReuseAddress(true);
+        IOException delayedEx = null;
 
-        ssChan.socket().bind(null);
+        try {
+            ssChan.close();
+        } catch (IOException ioe) {
+            if (delayedEx == null) delayedEx = ioe;
+        }
 
-        ssChan.register(sel, SelectionKey.OP_ACCEPT);
+        try {
+            sel.close();
+        } catch (IOException ioe) {
+            if (delayedEx == null) delayedEx = ioe;
+        }
 
-        return ssChan.socket().getLocalPort();
+        if (delayedEx != null) {
+            throw delayedEx;
+        }
+    }
+
+    public int getPort()
+    {
+        return port;
     }
 }

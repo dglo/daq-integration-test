@@ -33,8 +33,8 @@ import icecube.daq.util.IDOMRegistry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
 import java.nio.channels.Selector;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -48,122 +48,6 @@ import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
-
-class ActivityMonitor
-{
-    private IniceTriggerComponent iiComp;
-    private GlobalTriggerComponent gtComp;
-    private EBComponent ebComp;
-
-    private long iiSent;
-    private long gtSent;
-    private long reqRcvd;
-    private long reqSent;
-    private long dataRcvd;
-    private long evtsSent;
-
-    ActivityMonitor(IniceTriggerComponent iiComp,
-                    GlobalTriggerComponent gtComp,
-                    EBComponent ebComp)
-    {
-        this.iiComp = iiComp;
-        this.gtComp = gtComp;
-        this.ebComp = ebComp;
-    }
-
-    private void dumpProgress(int rep, int expEvents, boolean dumpSplicers)
-    {
-        long iiRcvd = iiComp.getPayloadsReceived();
-        long gtRcvd = gtComp.getPayloadsReceived();
-
-        String outStr =
-            String.format("#%d: II %d->%d GT %d->%d EB %d->%d->%d->%d",
-                          rep, iiRcvd, iiSent, gtRcvd, gtSent, reqRcvd,
-                          reqSent, dataRcvd, evtsSent);
-        System.err.println(outStr);
-
-        if (dumpSplicers && iiSent < expEvents + 1) {
-            dumpSplicer("II", iiComp.getSplicer());
-        }
-
-        if (dumpSplicers && gtSent < iiSent) {
-            dumpSplicer("GT", gtComp.getSplicer());
-        }
-
-        if (dumpSplicers && evtsSent + 1 < gtSent) {
-            dumpSplicer("EB", ebComp.getDataSplicer());
-        }
-    }
-
-    private void dumpSplicer(String title, Splicer splicer)
-    {
-        System.err.println("*********************");
-        System.err.println("*** " + title + " Splicer");
-        System.err.println("*********************");
-        String[] desc = ((HKN1Splicer) splicer).dumpDescription();
-        for (int d = 0; d < desc.length; d++) {
-            System.err.println("  " + desc[d]);
-        }
-    }
-
-    boolean waitForStasis(int staticReps, int maxReps, int expEvents,
-                          boolean verbose)
-    {
-        final int SLEEP_MSEC = 100;
-
-        int numStatic = 0;
-        for (int i = 0; i < maxReps; i++) {
-            boolean changed = false;
-
-            if (iiSent != iiComp.getPayloadsSent()) {
-                iiSent = iiComp.getPayloadsSent();
-                changed = true;
-            }
-            if (gtSent != gtComp.getPayloadsSent()) {
-                gtSent = gtComp.getPayloadsSent();
-                changed = true;
-            }
-            if (reqRcvd != ebComp.getTriggerRequestsReceived()) {
-                reqRcvd = ebComp.getTriggerRequestsReceived();
-                changed = true;
-            }
-            if (reqSent != ebComp.getRequestsSent()) {
-                reqSent = ebComp.getRequestsSent();
-                changed = true;
-            }
-            if (dataRcvd != ebComp.getReadoutsReceived()) {
-                dataRcvd = ebComp.getReadoutsReceived();
-                changed = true;
-            }
-            if (evtsSent != ebComp.getEventsSent()) {
-                evtsSent = ebComp.getEventsSent();
-                changed = true;
-            }
-
-            if (changed) {
-                numStatic = 0;
-            } else {
-                numStatic++;
-            }
-
-            if (verbose) {
-                dumpProgress(i, expEvents, false);
-            }
-
-            if (numStatic >= staticReps) {
-                break;
-            }
-
-            try {
-                Thread.sleep(SLEEP_MSEC);
-            } catch (Throwable thr) {
-                // ignore errors
-            }
-        }
-
-        return numStatic >= staticReps;
-    }
-}
 
 public class WorldTest
     extends TestCase
@@ -181,11 +65,12 @@ public class WorldTest
 
     private static final int RUN_NUMBER = 1234;
 
+    private MinimalServer minServer;
     private IniceTriggerComponent iiComp;
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
 
-    private WritableByteChannel[] iiTails;
+    private Pipe[] iiTails;
 
     private static final int[] hubId = new int[] {
         21, 29, 30, 38, 39, 40, 46, 47, 48,
@@ -447,7 +332,7 @@ public class WorldTest
             for (int i = 0; i < iiTails.length; i++) {
                 ISourceID srcId = idList.get(i);
                 if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].write(simpleBuf);
+                    iiTails[i].sink().write(simpleBuf);
                     written = true;
                     break;
                 }
@@ -463,6 +348,8 @@ public class WorldTest
         throws Exception
     {
         super.setUp();
+
+        DAQTestUtil.clearCachedChannels();
 
         appender.clear();
 
@@ -481,19 +368,16 @@ public class WorldTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (minServer != null) minServer.close();
         if (ebComp != null) ebComp.closeAll();
         if (gtComp != null) gtComp.closeAll();
         if (iiComp != null) iiComp.closeAll();
 
         if (iiTails != null) {
-            for (int i = 0; i < iiTails.length; i++) {
-                try {
-                    iiTails[i].close();
-                } catch (IOException ioe) {
-                    // ignore errors on close
-                }
-            }
+            DAQTestUtil.closePipeList(iiTails);
         }
+
+        DAQTestUtil.logOpenChannels();
 
         super.tearDown();
     }
@@ -504,11 +388,11 @@ public class WorldTest
     {
         final int numEvents = 20;
         final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
         final boolean dumpBEStats = false;
 
-        Selector sel = Selector.open();
-
-        int port = ServerUtil.createServer(sel);
+        minServer = new MinimalServer();
+        int port = minServer.getPort();
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -570,9 +454,6 @@ public class WorldTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        // finish global trigger setup
-        DAQTestUtil.startIOProcess(gtComp.getReader());
-
         DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
         DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
         DAQTestUtil.startIOProcess(ebComp.getDataReader());
@@ -591,7 +472,7 @@ public class WorldTest
             for (int i = 0; i < iiTails.length; i++) {
                 ISourceID srcId = idList.get(i);
                 if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].write(simpleBuf);
+                    iiTails[i].sink().write(simpleBuf);
                     written = true;
                     break;
                 }
@@ -602,8 +483,9 @@ public class WorldTest
             }
         }
 
-        ActivityMonitor activity = new ActivityMonitor(iiComp, gtComp, ebComp);
-        activity.waitForStasis(10, 100, numEvents, dumpActivity);
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
         if (dumpBEStats) dumpBackEndStats();
 
@@ -614,7 +496,7 @@ public class WorldTest
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
         DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
                                      "IIStopMsg");
@@ -633,7 +515,7 @@ public class WorldTest
             Thread.yield();
         }
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
         if (dumpBEStats) dumpBackEndStats();
 

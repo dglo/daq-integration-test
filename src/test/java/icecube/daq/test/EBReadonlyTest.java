@@ -33,8 +33,8 @@ import icecube.daq.util.IDOMRegistry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
 import java.nio.channels.Selector;
-import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -78,7 +78,7 @@ public class EBReadonlyTest
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
 
-    private WritableByteChannel[] iiTails;
+    private Pipe[] iiTails;
 
     public EBReadonlyTest(String name)
     {
@@ -744,7 +744,12 @@ public class EBReadonlyTest
         if (iiTails != null) {
             for (int i = 0; i < iiTails.length; i++) {
                 try {
-                    iiTails[i].close();
+                    iiTails[i].sink().close();
+                } catch (IOException ioe) {
+                    // ignore errors on close
+                }
+                try {
+                    iiTails[i].source().close();
                 } catch (IOException ioe) {
                     // ignore errors on close
                 }
@@ -850,7 +855,7 @@ public class EBReadonlyTest
             for (int i = 0; i < iiTails.length; i++) {
                 ISourceID srcId = idList.get(i);
                 if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].write(simpleBuf);
+                    iiTails[i].sink().write(simpleBuf);
                     written = true;
                     break;
                 }
@@ -863,45 +868,41 @@ public class EBReadonlyTest
 
         DAQTestUtil.sendStops(iiTails);
 
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
+        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, false, false);
+
         DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
                                      "IIInStopMsg", "", 1000, 100);
-
-        iiComp.flush();
 
         DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIOutStopMsg");
         DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
                                      "GTInStopMsg");
 
-        gtComp.flush();
-
         // NOTE: EB input is stopped due to read-only error
         // so remaining output engines will not be stopped
 
-        assertTrue("Expected GTOut to be running",
-                   gtComp.getWriter().isRunning());
+        //assertTrue("Expected GTOut to be running",
+        //           gtComp.getWriter().isRunning());
         DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
                                      "EBTrigStopMsg");
 
-        assertTrue("Expected EBReqOut to be running",
-                   ebComp.getRequestWriter().isRunning());
-        assertTrue("Expected EBDataIn to be running",
-                   ebComp.getDataReader().isRunning());
-        assertTrue("Expected EBDataSplicer to be running",
-                   ebComp.getDataSplicer().getState() == Splicer.STARTED);
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-            // ignore interrupts
-        }
+        //assertTrue("Expected EBReqOut to be running",
+        //           ebComp.getRequestWriter().isRunning());
+        //assertTrue("Expected EBDataIn to be running",
+        //           ebComp.getDataReader().isRunning());
+        //assertTrue("Expected EBDataSplicer to be running",
+        //           ebComp.getDataSplicer().getState() == Splicer.STARTED);
 
         assertEquals("Unexpected number of events sent",
                      numEventsBeforeReadOnly, ebComp.getEventsSent());
 
         //DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, null);
 
+/*
         assertTrue("GTOutCache does not have a backlog",
                    gtComp.getOutputCache().getCurrentAquiredBuffers() > 0);
+*/
 
         // Ignore extra log msgs
         appender.clear();

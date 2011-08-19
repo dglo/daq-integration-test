@@ -58,6 +58,8 @@ public class AmandaTriggerEndToEndTest
     private ByteBuffer trigBuf;
     private int trigUID = 1;
 
+    private MinimalServer minServer;
+
     public AmandaTriggerEndToEndTest(String name)
     {
         super(name);
@@ -181,6 +183,8 @@ public class AmandaTriggerEndToEndTest
 
         if (comp != null) comp.closeAll();
 
+        if (minServer != null) minServer.close();
+
         if (tails != null) {
             for (int i = 0; i < tails.length; i++) {
                 try {
@@ -204,7 +208,8 @@ public class AmandaTriggerEndToEndTest
 
         Selector sel = Selector.open();
 
-        int port = ServerUtil.createServer(sel);
+        minServer = new MinimalServer();
+        int port = minServer.getPort();
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -226,12 +231,18 @@ public class AmandaTriggerEndToEndTest
         DAQTestUtil.startIOProcess(comp.getWriter());
 
         tails = new WritableByteChannel[] {
-            ServerUtil.acceptChannel(sel),
+            minServer.acceptChannel(),
         };
 
         // load data into input channels
         sendAmandaData(tails, numObjs);
-        DAQTestUtil.sendStops(tails);
+        DAQTestUtil.sendStopMsg(tails[0]);
+
+        final int expEvents = 10;
+
+        ActivityMonitor activity =
+            new ActivityMonitor(null, null, comp, null, null);
+        activity.waitForStasis(15, 150, expEvents, false, false);
 
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "AMStopMsg");

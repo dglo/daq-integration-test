@@ -53,6 +53,9 @@ public class SubstandardTest
     private static final MockSourceID INICE_TRIGGER_SOURCE_ID =
         new MockSourceID(SourceIdRegistry.INICE_TRIGGER_SOURCE_ID);
 
+    private MinimalServer minServer;
+    private Pipe[] iiTails;
+
     public SubstandardTest(String name)
     {
         super(name);
@@ -2174,6 +2177,11 @@ public class SubstandardTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (minServer != null) minServer.close();
+        if (iiTails != null) {
+            DAQTestUtil.closePipeList(iiTails);
+        }
+
         super.tearDown();
     }
 
@@ -2184,7 +2192,8 @@ public class SubstandardTest
         // build amanda server
         Selector sel = Selector.open();
 
-        int port = ServerUtil.createServer(sel);
+        minServer = new MinimalServer();
+        int port = minServer.getPort();
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -2215,10 +2224,8 @@ public class SubstandardTest
                                    trValidator,
                                    gtComp.getReader(), gtComp.getInputCache());
 
-        WritableByteChannel[] iiTails =
-            DAQTestUtil.connectToReader(iiComp.getReader(),
-                                        iiComp.getInputCache(),
-                                        1);
+        iiTails = DAQTestUtil.connectToReader(iiComp.getReader(),
+                                              iiComp.getInputCache(), 1);
 
         // set up amanda trigger
         AmandaTriggerComponent amComp =
@@ -2242,7 +2249,7 @@ public class SubstandardTest
         DAQTestUtil.startIOProcess(amComp.getWriter());
 
         WritableByteChannel[] amTails = new WritableByteChannel[] {
-            ServerUtil.acceptChannel(sel),
+            minServer.acceptChannel(),
         };
 
         // load data into input channels
@@ -2262,13 +2269,13 @@ public class SubstandardTest
             if (i < iiList.size()) {
                 ByteBuffer bb = iiList.get(i);
                 bb.position(0);
-                iiTails[0].write(bb);
+                iiTails[0].sink().write(bb);
                 sentData = true;
             }
             if (!sentData) break;
         }
 
-        DAQTestUtil.sendStops(amTails);
+        DAQTestUtil.sendStopMsg(amTails[0]);
         DAQTestUtil.sendStops(iiTails);
 
         DAQTestUtil.waitUntilStopped(amComp.getReader(), amComp.getSplicer(),
