@@ -1,9 +1,9 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.Dispatcher;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.IEventPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
@@ -14,10 +14,16 @@ public class MockDispatcher
     implements Dispatcher
 {
     private IByteBufferCache bufMgr;
-    private int numSeen = 0;
-    private int numBad = 0;
-    private int readOnlyTrigger = 0;
-    private boolean readOnly = false;
+    private int numSeen;
+    private int numBad;
+    private int readOnlyTrigger;
+    private boolean readOnly;
+    private boolean started;
+
+    public MockDispatcher()
+    {
+        this(null);
+    }
 
     public MockDispatcher(IByteBufferCache bufMgr)
     {
@@ -36,10 +42,22 @@ public class MockDispatcher
         throw new Error("Unimplemented");
     }
 
-    public void dataBoundary(String s0)
+    public void dataBoundary(String msg)
         throws DispatchException
     {
-        // ignored
+        if (msg.startsWith(START_PREFIX)) {
+            if (started) {
+                throw new Error("Dispatcher has already been started");
+            }
+
+            started = true;
+        } else if (msg.startsWith(STOP_PREFIX)) {
+            if (!started) {
+                throw new Error("Dispatcher is already stopped");
+            }
+
+            started = false;
+        }
     }
 
     public void dispatchEvent(ByteBuffer buf)
@@ -52,6 +70,7 @@ public class MockDispatcher
         throws DispatchException
     {
         numSeen++;
+
         if (readOnlyTrigger > 0 && numSeen >= readOnlyTrigger) {
             readOnly = true;
         }
@@ -117,7 +136,8 @@ public class MockDispatcher
         return 0;
     }
 
-    public long getNumBytesWritten() {
+    public long getNumBytesWritten()
+    {
 	return 0;
     }
 
@@ -129,6 +149,11 @@ public class MockDispatcher
     public long getTotalDispatchedEvents()
     {
         return numSeen;
+    }
+
+    public boolean isStarted()
+    {
+        return started;
     }
 
     public void setDispatchDestStorage(String destDir)
