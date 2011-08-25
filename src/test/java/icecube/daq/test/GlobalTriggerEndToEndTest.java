@@ -4768,8 +4768,7 @@ public class GlobalTriggerEndToEndTest
                                   comp.getOutputCache(),
                                   new TriggerValidator());
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
 
         for (ByteBuffer bb : getTriggerList()) {
             bb.position(0);

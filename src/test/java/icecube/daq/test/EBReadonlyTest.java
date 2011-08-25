@@ -834,16 +834,7 @@ public class EBReadonlyTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        // finish global trigger setup
-        DAQTestUtil.startIOProcess(gtComp.getReader());
-
-        DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
-        DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
-        DAQTestUtil.startIOProcess(ebComp.getDataReader());
-        DAQTestUtil.startIOProcess(gtComp.getReader());
-        DAQTestUtil.startIOProcess(gtComp.getWriter());
-        DAQTestUtil.startIOProcess(iiComp.getReader());
-        DAQTestUtil.startIOProcess(iiComp.getWriter());
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
 
         ByteBuffer simpleBuf = ByteBuffer.allocate(HitData.SIMPLE_LENGTH);
         for (HitData hd : hitList) {

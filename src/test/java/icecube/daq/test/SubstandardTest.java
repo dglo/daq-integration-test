@@ -2240,13 +2240,7 @@ public class SubstandardTest
                                    trValidator,
                                    gtComp.getReader(), gtComp.getInputCache());
 
-        // start I/O engines
-        DAQTestUtil.startIOProcess(gtComp.getReader());
-        DAQTestUtil.startIOProcess(gtComp.getWriter());
-        DAQTestUtil.startIOProcess(iiComp.getReader());
-        DAQTestUtil.startIOProcess(iiComp.getWriter());
-        DAQTestUtil.startIOProcess(amComp.getReader());
-        DAQTestUtil.startIOProcess(amComp.getWriter());
+        DAQTestUtil.startComponentIO(null, gtComp, null, iiComp, amComp, null);
 
         WritableByteChannel[] amTails = new WritableByteChannel[] {
             minServer.acceptChannel(),

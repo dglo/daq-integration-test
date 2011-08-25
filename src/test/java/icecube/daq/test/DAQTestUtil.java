@@ -452,21 +452,69 @@ public final class DAQTestUtil
         }
     }
 
-    public static void startIOProcess(DAQComponentIOProcess rdr)
+    public static void startComponentIO(EBComponent ebComp,
+                                        GlobalTriggerComponent gtComp,
+                                        IcetopTriggerComponent itComp,
+                                        IniceTriggerComponent iiComp,
+                                        AmandaTriggerComponent amComp,
+                                        StringHubComponent[] shComps)
+        throws IOException
     {
-        if (!rdr.isRunning()) {
-            rdr.startProcessing();
-            waitUntilRunning(rdr);
+        ArrayList<DAQComponentIOProcess> procList =
+            new ArrayList<DAQComponentIOProcess>();
+
+        if (ebComp != null) {
+            procList.add(ebComp.getTriggerReader());
+            procList.add(ebComp.getRequestWriter());
+            procList.add(ebComp.getDataReader());
+        }
+        if (gtComp != null) {
+            procList.add(gtComp.getReader());
+            procList.add(gtComp.getWriter());
+        }
+        if (itComp != null) {
+            procList.add(itComp.getReader());
+            procList.add(itComp.getWriter());
+        }
+        if (iiComp != null) {
+            procList.add(iiComp.getReader());
+            procList.add(iiComp.getWriter());
+        }
+        if (amComp != null) {
+            procList.add(amComp.getReader());
+            procList.add(amComp.getWriter());
+        }
+        if (shComps != null) {
+            for (int i = 0; i < shComps.length; i++) {
+                shComps[i].getSender().reset();
+                procList.add(shComps[i].getHitWriter());
+                procList.add(shComps[i].getRequestReader());
+                procList.add(shComps[i].getDataWriter());
+            }
+        }
+
+        for (DAQComponentIOProcess proc : procList) {
+            if (!proc.isRunning()) {
+                proc.startProcessing();
+            }
+        }
+
+        for (DAQComponentIOProcess proc : procList) {
+            if (!proc.isRunning()) {
+                waitUntilRunning(proc);
+            }
         }
     }
 
-    public static final void waitUntilRunning(DAQComponentIOProcess proc)
+    private static void startIOProcess(DAQComponentIOProcess proc)
     {
-        waitUntilRunning(proc, "");
+        if (!proc.isRunning()) {
+            proc.startProcessing();
+            waitUntilRunning(proc);
+        }
     }
 
-    public static final void waitUntilRunning(DAQComponentIOProcess proc,
-                                              String extra)
+    private static final void waitUntilRunning(DAQComponentIOProcess proc)
     {
         for (int i = 0; i < REPS && !proc.isRunning(); i++) {
             try {
@@ -477,7 +525,7 @@ public final class DAQTestUtil
         }
 
         assertTrue("IOProcess in " + proc.getPresentState() +
-                   ", not Running after StartSig" + extra, proc.isRunning());
+                   ", not Running after StartSig", proc.isRunning());
     }
 
     public static final void waitUntilStopped(DAQComponentIOProcess proc,

@@ -176,8 +176,7 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, null, null, comp, null, null);
 
         // load data into input channels
         sendInIceData(tails, numObjs);

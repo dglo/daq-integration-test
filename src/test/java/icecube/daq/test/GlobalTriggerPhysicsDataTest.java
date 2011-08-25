@@ -254,8 +254,7 @@ public class GlobalTriggerPhysicsDataTest
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 

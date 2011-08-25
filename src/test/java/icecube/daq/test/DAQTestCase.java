@@ -440,48 +440,6 @@ public abstract class DAQTestCase
         appender.setVerbose(val);
     }
 
-    void startComponentIO(MinimalServer minServer, EBComponent ebComp,
-                          GlobalTriggerComponent gtComp,
-                          IcetopTriggerComponent itComp,
-                          IniceTriggerComponent iiComp,
-                          AmandaTriggerComponent amComp,
-                          StringHubComponent[] shComps)
-        throws IOException
-    {
-        if (ebComp != null) {
-            DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
-            DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
-            DAQTestUtil.startIOProcess(ebComp.getDataReader());
-        }
-        if (gtComp != null) {
-            DAQTestUtil.startIOProcess(gtComp.getReader());
-            DAQTestUtil.startIOProcess(gtComp.getWriter());
-        }
-        if (itComp != null) {
-            DAQTestUtil.startIOProcess(itComp.getReader());
-            DAQTestUtil.startIOProcess(itComp.getWriter());
-        }
-        if (iiComp != null) {
-            DAQTestUtil.startIOProcess(iiComp.getReader());
-            DAQTestUtil.startIOProcess(iiComp.getWriter());
-        }
-        if (amComp != null) {
-            DAQTestUtil.startIOProcess(amComp.getReader());
-            DAQTestUtil.startIOProcess(amComp.getWriter());
-
-            amTail = minServer.acceptChannel();
-
-            initializeAmandaInput(amTail);
-        }
-
-        for (int i = 0; i < shComps.length; i++) {
-            shComps[i].getSender().reset();
-            DAQTestUtil.startIOProcess(shComps[i].getHitWriter());
-            DAQTestUtil.startIOProcess(shComps[i].getRequestReader());
-            DAQTestUtil.startIOProcess(shComps[i].getDataWriter());
-        }
-    }
-
     protected void tearDown()
         throws Exception
     {
@@ -652,8 +610,15 @@ public abstract class DAQTestCase
         pipeList =
             connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
-        startComponentIO(minServer, ebComp, gtComp, itComp, iiComp, amComp,
-                         shComps);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, amComp,
+                                     shComps);
+
+        // finish amanda initialization
+        if (amComp != null) {
+            amTail = minServer.acceptChannel();
+
+            initializeAmandaInput(amTail);
+        }
 
         // start sending input data
         sendData(shComps);

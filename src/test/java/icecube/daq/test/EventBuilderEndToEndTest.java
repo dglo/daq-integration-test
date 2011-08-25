@@ -298,9 +298,7 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startIOProcess(comp.getTriggerReader());
-        DAQTestUtil.startIOProcess(comp.getRequestWriter());
-        DAQTestUtil.startIOProcess(comp.getDataReader());
+        DAQTestUtil.startComponentIO(comp, null, null, null, null, null);
 
         sendGlobalTriggers(gtPipe.sink());
 

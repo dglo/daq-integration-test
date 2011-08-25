@@ -227,8 +227,7 @@ public class AmandaTriggerEndToEndTest
         DAQTestUtil.connectToSink("amOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, null, null, null, comp, null);
 
         tails = new WritableByteChannel[] {
             minServer.acceptChannel(),
