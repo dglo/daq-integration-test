@@ -206,6 +206,8 @@ public abstract class DAQTestCase
 
     abstract int getNumberOfAmandaTriggerSent();
 
+    abstract int getNumberOfExpectedEvents();
+
     abstract void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException;
 
@@ -478,6 +480,11 @@ public abstract class DAQTestCase
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
+        final int numEvents = getNumberOfExpectedEvents();
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
@@ -623,6 +630,11 @@ public abstract class DAQTestCase
         // start sending input data
         sendData(shComps);
 
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, itComp, amComp, gtComp, ebComp);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
         for (int i = 0; i < shComps.length; i++) {
             int hubNum = shComps[i].getHubId() % 100;
 
@@ -665,6 +677,9 @@ public abstract class DAQTestCase
                                          "SH#" + hubNum + "DataStop");
         }
 
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
         monitorEventBuilder(ebComp, 10);
         DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
                                      "EBStopMsg");
@@ -677,12 +692,8 @@ public abstract class DAQTestCase
             Thread.yield();
         }
 
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-            // ignore interrupts
-        }
-
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
         if (false) {
             if (iiComp != null) System.err.println("II " + iiComp);

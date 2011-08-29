@@ -235,13 +235,16 @@ public class AmandaTriggerEndToEndTest
 
         // load data into input channels
         sendAmandaData(tails, numObjs);
-        DAQTestUtil.sendStopMsg(tails[0]);
 
         final int expEvents = 10;
 
         ActivityMonitor activity =
             new ActivityMonitor(null, null, comp, null, null);
-        activity.waitForStasis(15, 150, expEvents, false, false);
+        activity.waitForStasis(10, 100, expEvents, false, false);
+
+        DAQTestUtil.sendStopMsg(tails[0]);
+
+        activity.waitForStasis(10, 100, expEvents, false, false);
 
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "AMStopMsg");

@@ -77,6 +77,11 @@ public class DAQInTheFileTest
         return amInput.getNumberWritten();
     }
 
+    int getNumberOfExpectedEvents()
+    {
+        return 509;
+    }
+
     void initialize(IDOMRegistry domRegistry)
     {
         final String rawDataName = "raw_data";

@@ -2189,6 +2189,9 @@ public class SubstandardTest
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+
         // build amanda server
         Selector sel = Selector.open();
 
@@ -2269,8 +2272,16 @@ public class SubstandardTest
             if (!sentData) break;
         }
 
+        int numEvents = 509;
+
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, amComp, gtComp, null);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+
         DAQTestUtil.sendStopMsg(amTails[0]);
         DAQTestUtil.sendStops(iiTails);
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
         DAQTestUtil.waitUntilStopped(amComp.getReader(), amComp.getSplicer(),
                                      "AMStopMsg");
@@ -2282,18 +2293,14 @@ public class SubstandardTest
                                      "GTStopMsg");
         DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
 
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-            // ignore interrupts
-        }
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
         assertEquals("Unexpected number of in-ice triggers",
                      16, iiComp.getPayloadsSent() - 1);
         assertEquals("Unexpected number of Amanda triggers",
                      numAmanda, amComp.getPayloadsSent() - 1);
         assertEquals("Unexpected number of global triggers",
-                     509, gtComp.getPayloadsSent() - 1);
+                     numEvents, gtComp.getPayloadsSent() - 1);
 
         assertFalse("Found invalid global trigger(s)",
                     gtValidator.foundInvalid());

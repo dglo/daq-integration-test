@@ -2123,10 +2123,14 @@ public class DAQInTheBoxTest
         return list;
     }
 
-
     int getNumberOfAmandaTriggerSent()
     {
         return numAmandaInputs;
+    }
+
+    int getNumberOfExpectedEvents()
+    {
+        return 509;
     }
 
     private static List<ISourceID> getSourceIds(List<HitData> hitList)
