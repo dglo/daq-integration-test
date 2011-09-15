@@ -18,8 +18,9 @@ import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +34,10 @@ public class RequestToDataBridge
 
     private ISourceID srcId;
     private List<HitData> hitList;
+    private int numRcvd;
+    private int numEmpty;
+    private int numSent;
+    private int numDone;
 
     private MasterPayloadFactory factory;
 
@@ -45,16 +50,16 @@ public class RequestToDataBridge
         this.hitList = hitList;
     }
 
-    public static List<ISourceID> createLinks(DAQSourceIdOutputProcess reqOut,
-                                              PayloadValidator validator,
-                                              PayloadReader dataIn,
-                                              IByteBufferCache dataCache,
-                                              List<HitData> hitList)
+    public static Map<ISourceID, RequestToDataBridge>
+        createLinks(DAQSourceIdOutputProcess reqOut,
+                    PayloadValidator validator, PayloadReader dataIn,
+                    IByteBufferCache dataCache, List<HitData> hitList)
         throws IOException
     {
-        List<ISourceID> idList = getSourceIds(hitList);
+        HashMap<ISourceID, RequestToDataBridge> bridgeMap =
+            new HashMap<ISourceID, RequestToDataBridge>();
 
-        for (ISourceID srcId : idList) {
+        for (ISourceID srcId : getSourceIds(hitList)) {
             Pipe outPipe = Pipe.open();
 
             Pipe.SinkChannel sinkOut = outPipe.sink();
@@ -73,15 +78,17 @@ public class RequestToDataBridge
             Pipe.SourceChannel srcIn = inPipe.source();
             srcIn.configureBlocking(false);
 
-            dataIn.addDataChannel(srcIn, dataCache, 1024);
+            dataIn.addDataChannel(srcIn, "r2dbChan", dataCache, 1024);
 
             RequestToDataBridge bridge =
                 new RequestToDataBridge(srcId, srcOut, sinkIn, hitList);
             bridge.setValidator(validator);
             bridge.start();
+
+            bridgeMap.put(srcId, bridge);
         }
 
-        return idList;
+        return bridgeMap;
     }
 
     private List<HitData> extractHits(int srcId, long firstTime, long lastTime)
@@ -97,6 +104,26 @@ public class RequestToDataBridge
         }
 
         return list;
+    }
+
+    public int getNumberDone()
+    {
+        return numDone;
+    }
+
+    public int getNumberEmpty()
+    {
+        return numEmpty;
+    }
+
+    public int getNumberReceived()
+    {
+        return numRcvd;
+    }
+
+    public int getNumberSent()
+    {
+        return numSent;
     }
 
     private static List<ISourceID> getSourceIds(List<HitData> hitList)
@@ -124,6 +151,8 @@ public class RequestToDataBridge
             return;
         }
 
+        numRcvd++;
+
         final int baseLen = 28;
 
         final int uid = rReq.getUID();
@@ -142,6 +171,7 @@ public class RequestToDataBridge
 
             List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
             if (dataHits.size() == 0) {
+                numEmpty++;
                 continue;
             }
 
@@ -185,10 +215,13 @@ public class RequestToDataBridge
             buf.limit(bufLen);
 
             super.write(buf);
+            numSent++;
         }
+
+        numDone++;
     }
 
-    public void sendReadoutData(IReadoutRequest rReq)
+    private void sendReadoutData(IReadoutRequest rReq)
         throws IOException
     {
         final int baseLen = 54;
@@ -205,6 +238,8 @@ public class RequestToDataBridge
             return;
         }
 
+        numRcvd++;
+
         ByteBuffer buf = null;
         for (Object obj : rReq.getReadoutRequestElements()) {
             IReadoutRequestElement elem = (IReadoutRequestElement) obj;
@@ -215,6 +250,7 @@ public class RequestToDataBridge
 
             List<HitData> dataHits = extractHits(srcId, firstTime, lastTime);
             if (dataHits.size() == 0) {
+                numEmpty++;
                 continue;
             }
 
@@ -269,7 +305,10 @@ public class RequestToDataBridge
             buf.limit(bufLen);
 
             super.write(buf);
+            numSent++;
         }
+
+        numDone++;
     }
 
     public void sendStop()

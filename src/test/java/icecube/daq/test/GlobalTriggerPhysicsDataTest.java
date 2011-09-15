@@ -1,7 +1,9 @@
 package icecube.daq.test;
 
 import icecube.daq.payload.IEventPayload;
+import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.PayloadFileReader;
+import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.oldpayload.TriggerRegistry;
 import icecube.daq.payload.ILoadablePayload;
@@ -11,11 +13,14 @@ import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
+import icecube.daq.splicer.HKN1Splicer;
+import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.ByteBuffer;
@@ -50,6 +55,8 @@ public class GlobalTriggerPhysicsDataTest
         new HashMap<ISourceID, List<IWriteablePayload>>();
 
     private static int numEventsInFile;
+
+    private Pipe[] tails;
 
     public GlobalTriggerPhysicsDataTest(String name)
     {
@@ -203,12 +210,17 @@ public class GlobalTriggerPhysicsDataTest
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
+        if (tails != null) {
+            DAQTestUtil.closePipeList(tails);
+        }
+
         super.tearDown();
     }
 
     public void testRealFile()
         throws DAQCompException, IOException
     {
+
         if (streams.size() == 0) {
             String dataPath =
                 getClass().getResource("/global_trigger.physics.dat").getPath();
@@ -235,17 +247,15 @@ public class GlobalTriggerPhysicsDataTest
 
         comp.configuring(cfgFile.getName());
 
-        WritableByteChannel[] tails =
-            DAQTestUtil.connectToReader(comp.getReader(), comp.getInputCache(),
-                                        numTails);
+        tails = DAQTestUtil.connectToReader(comp.getReader(),
+                                            comp.getInputCache(), numTails);
 
         GlobalTriggerValidator validator = new GlobalTriggerValidator();
 
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 
@@ -254,7 +264,8 @@ public class GlobalTriggerPhysicsDataTest
             List<IWriteablePayload> stream = streams.get(srcId);
 
             prod[nextTail] =
-                new TriggerProducer(srcId.toString(), stream, tails[nextTail]);
+                new TriggerProducer(srcId.toString(), stream,
+                                    tails[nextTail].sink());
             prod[nextTail].start();
 
             nextTail++;
@@ -266,17 +277,16 @@ public class GlobalTriggerPhysicsDataTest
             for (int i = 0; done && i < prod.length; i++) {
                 if (prod[i].isRunning()) {
                     done = false;
+
+                    try {
+                        Thread.sleep(100);
+                    } catch (Exception ex) {
+                        // ignore exceptions
+                    }
                 }
             }
-
             if (done) {
                 break;
-            }
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ie) {
-                // ignore interrupts
             }
         }
 
@@ -286,27 +296,27 @@ public class GlobalTriggerPhysicsDataTest
             }
         }
 
-        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-            // ignore interrupts
-        }
-
-        for (int i = 0; i < prod.length; i++) {
-            System.out.println(prod[i].getName() + " wrote " +
-                               prod[i].getNumberWritten());
-        }
-
         int expEvents;
         if (numEventsInFile != 2494) {
             expEvents = numEventsInFile;
         } else {
             // hack for file with bogus events (the 1% out-of-order bug)
             expEvents = 2481;
+        }
+
+        ActivityMonitor activity =
+            new ActivityMonitor(null, null, null, comp, null);
+        activity.waitForStasis(5, 150, expEvents, false, false);
+
+        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
+                                     "GTStopMsg");
+        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
+
+        if (false) {
+            for (int i = 0; i < prod.length; i++) {
+                System.out.println(prod[i].getName() + " wrote " +
+                                   prod[i].getNumberWritten());
+            }
         }
 
         assertEquals("Unexpected number of global triggers",

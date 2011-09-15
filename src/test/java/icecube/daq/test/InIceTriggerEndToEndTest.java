@@ -48,7 +48,7 @@ public class InIceTriggerEndToEndTest
         5000L / (long) (NUM_HITS_PER_TRIGGER + 1);
 
     private IniceTriggerComponent comp;
-    private WritableByteChannel[] tails;
+    private Pipe[] tails;
 
     private ByteBuffer hitBuf;
 
@@ -104,7 +104,7 @@ public class InIceTriggerEndToEndTest
         }
     }
 
-    private void sendInIceData(WritableByteChannel[] tails, int numObjs)
+    private void sendInIceData(Pipe[] tails, int numObjs)
         throws IOException
     {
         for (int i = 0; i < numObjs; i++) {
@@ -117,7 +117,7 @@ public class InIceTriggerEndToEndTest
             }
 
             final int tailIndex = i % tails.length;
-            sendHit(tails[tailIndex], time, tailIndex, 987654321L * i);
+            sendHit(tails[tailIndex].sink(), time, tailIndex, 987654321L * i);
         }
     }
 
@@ -146,13 +146,7 @@ public class InIceTriggerEndToEndTest
         if (comp != null) comp.closeAll();
 
         if (tails != null) {
-            for (int i = 0; i < tails.length; i++) {
-                try {
-                    tails[i].close();
-                } catch (IOException ioe) {
-                    // ignore errors on close
-                }
-            }
+            DAQTestUtil.closePipeList(tails);
         }
 
         super.tearDown();
@@ -182,8 +176,7 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, null, null, comp, null, null);
 
         // load data into input channels
         sendInIceData(tails, numObjs);
@@ -192,8 +185,6 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "IIStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "IIStopMsg");
-
-        comp.flush();
 
         assertEquals("Bad number of payloads written",
                      numObjs / NUM_HITS_PER_TRIGGER,

@@ -29,6 +29,7 @@ import icecube.daq.util.IDOMRegistry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.WritableByteChannel;
@@ -60,6 +61,9 @@ public abstract class DAQTestCase
     private AmandaTriggerComponent amComp;
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
+    private MinimalServer minServer;
+    private List<Pipe> pipeList;
+    private WritableByteChannel amTail;
 
     public DAQTestCase(String name)
     {
@@ -87,13 +91,15 @@ public abstract class DAQTestCase
         appender.clear();
     }
 
-    private static void connectHubsAndEB(StringHubComponent[] shComps,
-                                         TriggerComponent itComp,
-                                         TriggerComponent iiComp,
-                                         EBComponent ebComp,
-                                         PayloadValidator validator)
+    private static List<Pipe> connectHubsAndEB(StringHubComponent[] shComps,
+                                               TriggerComponent itComp,
+                                               TriggerComponent iiComp,
+                                               EBComponent ebComp,
+                                               PayloadValidator validator)
         throws DAQCompException, IOException
     {
+        List<Pipe> pipeList = new ArrayList<Pipe>();
+
         // connect SH hit to triggers
         for (int n = 0; n < 2; n++) {
             final boolean connectInIce = (n == 0);
@@ -120,13 +126,15 @@ public abstract class DAQTestCase
                     (!connectInIce &&
                      SourceIdRegistry.isIcetopHubSourceID(srcId)))
                 {
-                    WritableByteChannel sinkChannel =
+                    Pipe pipe =
                         DAQTestUtil.connectToReader(hitRdr, cache, false);
-                    ((SelectableChannel) sinkChannel).configureBlocking(false);
+                    ((SelectableChannel) pipe.sink()).configureBlocking(false);
 
                     DAQComponentOutputProcess outProc =
                         shComps[i].getHitWriter();
-                    outProc.addDataChannel(sinkChannel, shComps[i].getCache());
+                    outProc.addDataChannel(pipe.sink(), shComps[i].getCache());
+
+                    pipeList.add(pipe);
                 }
             }
         }
@@ -135,12 +143,13 @@ public abstract class DAQTestCase
         DAQSourceIdOutputProcess dest = ebComp.getRequestWriter();
         for (int i = 0; i < shComps.length; i++) {
             PayloadReader rdr = shComps[i].getRequestReader();
-            WritableByteChannel sinkChannel =
+            Pipe pipe =
                 DAQTestUtil.connectToReader(rdr, shComps[i].getCache(), false);
-            ((SelectableChannel) sinkChannel).configureBlocking(false);
+            ((SelectableChannel) pipe.sink()).configureBlocking(false);
 
-            dest.addDataChannel(sinkChannel,
+            dest.addDataChannel(pipe.sink(),
                                 new MockSourceID(shComps[i].getHubId()));
+            pipeList.add(pipe);
         }
 
         // connect SH data to EB
@@ -155,6 +164,8 @@ public abstract class DAQTestCase
                                        ebComp.getDataReader(),
                                        ebComp.getDataCache());
         }
+
+        return pipeList;
     }
 
     void destroyComponentIO(EBComponent ebComp,
@@ -195,6 +206,8 @@ public abstract class DAQTestCase
 
     abstract int getNumberOfAmandaTriggerSent();
 
+    abstract int getNumberOfExpectedEvents();
+
     abstract void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException;
 
@@ -224,7 +237,7 @@ public abstract class DAQTestCase
                 monData.getNumReadoutsQueued();
             final long numSent = monData.getNumEventsSent();
 
-System.err.println(toString() + " (#" + numTries + ")");
+            //System.err.println(toString() + " (#" + numTries + ")");
 
             boolean stagnant = true;
             if (isRunning && numRcvd > prevRcvd) {
@@ -283,7 +296,7 @@ System.err.println(toString() + " (#" + numTries + ")");
                 break;
             }
 
-System.err.println(toString() + " (#" + numTries + ")");
+            //System.err.println(toString() + " (#" + numTries + ")");
 
             boolean stagnant = true;
             if (checkHits) {
@@ -367,7 +380,7 @@ System.err.println(toString() + " (#" + numTries + ")");
             final int numProc = trigMgr.getCount();
             final long numSent = comp.getPayloadsSent();
 
-System.err.println(comp.toString() + " (#" + numTries + ")");
+            //System.err.println(comp.toString() + " (#" + numTries + ")");
 
             boolean stagnant = true;
             if (isRunning && numRcvd > prevRcvd) {
@@ -429,48 +442,6 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         appender.setVerbose(val);
     }
 
-    void startComponentIO(Selector sel, EBComponent ebComp,
-                          GlobalTriggerComponent gtComp,
-                          IcetopTriggerComponent itComp,
-                          IniceTriggerComponent iiComp,
-                          AmandaTriggerComponent amComp,
-                          StringHubComponent[] shComps)
-        throws IOException
-    {
-        if (ebComp != null) {
-            DAQTestUtil.startIOProcess(ebComp.getTriggerReader());
-            DAQTestUtil.startIOProcess(ebComp.getRequestWriter());
-            DAQTestUtil.startIOProcess(ebComp.getDataReader());
-        }
-        if (gtComp != null) {
-            DAQTestUtil.startIOProcess(gtComp.getReader());
-            DAQTestUtil.startIOProcess(gtComp.getWriter());
-        }
-        if (itComp != null) {
-            DAQTestUtil.startIOProcess(itComp.getReader());
-            DAQTestUtil.startIOProcess(itComp.getWriter());
-        }
-        if (iiComp != null) {
-            DAQTestUtil.startIOProcess(iiComp.getReader());
-            DAQTestUtil.startIOProcess(iiComp.getWriter());
-        }
-        if (amComp != null) {
-            DAQTestUtil.startIOProcess(amComp.getReader());
-            DAQTestUtil.startIOProcess(amComp.getWriter());
-
-            WritableByteChannel amTail = ServerUtil.acceptChannel(sel);
-
-            initializeAmandaInput(amTail);
-        }
-
-        for (int i = 0; i < shComps.length; i++) {
-            shComps[i].getSender().reset();
-            DAQTestUtil.startIOProcess(shComps[i].getHitWriter());
-            DAQTestUtil.startIOProcess(shComps[i].getRequestReader());
-            DAQTestUtil.startIOProcess(shComps[i].getDataWriter());
-        }
-    }
-
     protected void tearDown()
         throws Exception
     {
@@ -491,6 +462,17 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             }
         }
 
+        if (pipeList != null) {
+            for (Pipe pipe : pipeList) {
+                try { pipe.sink().close(); } catch (Exception ex) { }
+                try { pipe.source().close(); } catch (Exception ex) { }
+            }
+        }
+
+        if (amTail != null) {
+            try { amTail.close(); } catch (Exception ex) { }
+        }
+
         super.tearDown();
     }
 
@@ -498,6 +480,11 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
+        final int numEvents = getNumberOfExpectedEvents();
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
@@ -604,15 +591,12 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                                        gtComp.getInputCache());
         }
 
-        Selector sel;
         if (!needAmandaTrig()) {
-            sel = null;
             amComp = null;
         } else {
             // build amanda server
-            sel = Selector.open();
-
-            int port = ServerUtil.createServer(sel);
+            minServer = new MinimalServer();
+            int port = minServer.getPort();
 
             // set up amanda trigger
             amComp = new AmandaTriggerComponent("localhost", port);
@@ -630,12 +614,26 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
         }
 
         // finish setup
-        connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
+        pipeList =
+            connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
-        startComponentIO(sel, ebComp, gtComp, itComp, iiComp, amComp, shComps);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, amComp,
+                                     shComps);
+
+        // finish amanda initialization
+        if (amComp != null) {
+            amTail = minServer.acceptChannel();
+
+            initializeAmandaInput(amTail);
+        }
 
         // start sending input data
         sendData(shComps);
+
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, itComp, amComp, gtComp, ebComp);
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
         for (int i = 0; i < shComps.length; i++) {
             int hubNum = shComps[i].getHubId() % 100;
@@ -679,6 +677,9 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
                                          "SH#" + hubNum + "DataStop");
         }
 
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
         monitorEventBuilder(ebComp, 10);
         DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
                                      "EBStopMsg");
@@ -691,17 +692,16 @@ System.err.println(comp.toString() + " (#" + numTries + ")");
             Thread.yield();
         }
 
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-            // ignore interrupts
-        }
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
-        if (iiComp != null) System.err.println("II " + iiComp);
-        if (itComp != null) System.err.println("IT " + itComp);
-        if (amComp != null) System.err.println("AM " + amComp);
-        System.err.println("GT " + gtComp);
-        System.err.println("EB " + ebComp);
+        if (false) {
+            if (iiComp != null) System.err.println("II " + iiComp);
+            if (itComp != null) System.err.println("IT " + itComp);
+            if (amComp != null) System.err.println("AM " + amComp);
+            System.err.println("GT " + gtComp);
+            System.err.println("EB " + ebComp);
+        }
 
         if (disp.getNumberOfBadEvents() > 0) {
             fail(disp.toString());

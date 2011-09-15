@@ -58,6 +58,8 @@ public class AmandaTriggerEndToEndTest
     private ByteBuffer trigBuf;
     private int trigUID = 1;
 
+    private MinimalServer minServer;
+
     public AmandaTriggerEndToEndTest(String name)
     {
         super(name);
@@ -181,6 +183,8 @@ public class AmandaTriggerEndToEndTest
 
         if (comp != null) comp.closeAll();
 
+        if (minServer != null) minServer.close();
+
         if (tails != null) {
             for (int i = 0; i < tails.length; i++) {
                 try {
@@ -204,7 +208,8 @@ public class AmandaTriggerEndToEndTest
 
         Selector sel = Selector.open();
 
-        int port = ServerUtil.createServer(sel);
+        minServer = new MinimalServer();
+        int port = minServer.getPort();
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -222,22 +227,28 @@ public class AmandaTriggerEndToEndTest
         DAQTestUtil.connectToSink("amOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startIOProcess(comp.getReader());
-        DAQTestUtil.startIOProcess(comp.getWriter());
+        DAQTestUtil.startComponentIO(null, null, null, null, comp, null);
 
         tails = new WritableByteChannel[] {
-            ServerUtil.acceptChannel(sel),
+            minServer.acceptChannel(),
         };
 
         // load data into input channels
         sendAmandaData(tails, numObjs);
-        DAQTestUtil.sendStops(tails);
+
+        final int expEvents = 10;
+
+        ActivityMonitor activity =
+            new ActivityMonitor(null, null, comp, null, null);
+        activity.waitForStasis(10, 100, expEvents, false, false);
+
+        DAQTestUtil.sendStopMsg(tails[0]);
+
+        activity.waitForStasis(10, 100, expEvents, false, false);
 
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "AMStopMsg");
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "AMStopMsg");
-
-        comp.flush();
 
         assertEquals("Bad number of payloads written",
                      numObjs, comp.getPayloadsSent());
