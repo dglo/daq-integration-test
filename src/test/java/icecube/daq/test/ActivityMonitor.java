@@ -35,9 +35,6 @@ class TriggerMonitor
         boolean newStopped = (comp == null ||
                               (!comp.getReader().isRunning() &&
                                comp.getWriter().isStopped()));
-        if (stopped != newStopped) {
-            stopped = newStopped;
-        }
 
         boolean changed = false;
         if (comp != null && !summarized) {
@@ -53,6 +50,10 @@ class TriggerMonitor
                 sent = comp.getPayloadsSent();
                 changed = true;
             }
+        }
+
+        if (stopped != newStopped) {
+            stopped = newStopped;
         }
 
         return changed;
@@ -121,12 +122,9 @@ class EventBuilderMonitor
                                comp.getRequestWriter().isStopped() &&
                                !comp.getDataReader().isRunning() &&
                                !comp.getDispatcher().isStarted()));
-        if (stopped != newStopped) {
-            stopped = newStopped;
-        }
 
         boolean changed = false;
-        if (!stopped) {
+        if (!stopped && comp != null) {
             if (reqRcvd != comp.getTriggerRequestsReceived()) {
                 reqRcvd = comp.getTriggerRequestsReceived();
                 changed = true;
@@ -157,6 +155,10 @@ class EventBuilderMonitor
                 evtsSent = comp.getEventsSent();
                 changed = true;
             }
+        }
+
+        if (stopped != newStopped) {
+            stopped = newStopped;
         }
 
         return changed;
