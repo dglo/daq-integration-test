@@ -800,8 +800,7 @@ public class EBReadonlyTest
         Map<ISourceID, RequestToDataBridge> bridgeMap =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
                                             ebComp.getDataReader(),
-                                            ebComp.getDataCache(),
-                                            hitList);
+                                            ebComp.getDataCache(), hitList);
 
         List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
 

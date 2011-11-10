@@ -4770,6 +4770,8 @@ public class GlobalTriggerEndToEndTest
 
         DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
 
+        int expTriggers = 565;
+
         for (ByteBuffer bb : getTriggerList()) {
             bb.position(0);
             tails[0].sink().write(bb);
@@ -4788,7 +4790,7 @@ public class GlobalTriggerEndToEndTest
         }
 
         assertEquals("Unexpected number of global triggers",
-                     565, comp.getPayloadsSent() - 1);
+                     expTriggers, comp.getPayloadsSent() - 1);
 
         IByteBufferCache inCache = comp.getInputCache();
         assertTrue("Input buffer cache is unbalanced (" + inCache + ")",

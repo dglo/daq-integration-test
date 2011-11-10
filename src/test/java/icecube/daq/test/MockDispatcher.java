@@ -80,8 +80,8 @@ public class MockDispatcher
         }
 
         if (readOnly) {
-            throw new DispatchException("Could not dispatch event",
-                                        new IOException("Read-only file system"));
+            IOException ioe = new IOException("Read-only file system");
+            throw new DispatchException("Could not dispatch event", ioe);
         }
 
         ByteBuffer buf;
@@ -138,7 +138,7 @@ public class MockDispatcher
 
     public long getNumBytesWritten()
     {
-	return 0;
+        return 0;
     }
 
     public int getNumberOfBadEvents()
@@ -174,7 +174,8 @@ public class MockDispatcher
     /**
      * Trigger a read-only filesystem event after <tt>eventCount</tt> events.
      *
-     * @param eventCount number of events needed to trigger a read-only filesystem
+     * @param eventCount number of events needed to trigger a read-only
+     *                   filesystem
      */
     public void setReadOnlyTrigger(int eventCount)
     {

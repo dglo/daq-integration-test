@@ -221,15 +221,17 @@ public class GlobalTriggerPhysicsDataTest
     {
 
         if (streams.size() == 0) {
-            String dataPath =
-                getClass().getResource("/global_trigger.physics.dat").getPath();
+            URL dataURL = getClass().getResource("/global_trigger.physics.dat");
+            if (dataURL == null) {
+                throw new IOException("Cannot find GT physics data");
+            }
 
-            numEventsInFile = extractStreams(dataPath);
+            numEventsInFile = extractStreams(dataURL.getPath());
             sortStreams();
             //dumpStreams(System.out);
 
             if (streams.size() == 0) {
-                throw new Error(dataPath + " seems to be empty");
+                throw new Error(dataURL.getPath() + " seems to be empty");
             }
         }
 
