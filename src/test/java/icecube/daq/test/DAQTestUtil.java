@@ -128,104 +128,139 @@ public final class DAQTestUtil
                                    StringHubComponent[] shComps)
         throws DAQCompException
     {
+        checkCaches(ebComp, gtComp, itComp, iiComp, amComp, shComps, true);
+    }
+
+    public static void checkCaches(EBComponent ebComp,
+                                   GlobalTriggerComponent gtComp,
+                                   IcetopTriggerComponent itComp,
+                                   IniceTriggerComponent iiComp,
+                                   AmandaTriggerComponent amComp,
+                                   StringHubComponent[] shComps,
+                                   boolean crossCheck)
+        throws DAQCompException
+    {
         final boolean debug = false;
 
-        assertEquals("Mismatch between global triggers sent and events sent",
-                     gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
+        if (crossCheck && gtComp != null && ebComp != null) {
+            assertEquals("Mismatch between global triggers sent and" +
+                         " events sent", gtComp.getPayloadsSent() - 1,
+                         ebComp.getEventsSent());
+        }
 
-        IByteBufferCache ebGTCache =
-            ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
-        if (debug) System.err.println("EB GTcache " + ebGTCache);
-        assertTrue("EB trigger buffer cache is unbalanced (" + ebGTCache + ")",
-                   ebGTCache.isBalanced());
-        assertTrue("EB trigger buffer cache is unused (" + ebGTCache +
-                   ")", ebGTCache.getTotalBuffersAcquired() > 0);
+        IByteBufferCache ebGTCache = null;
 
-        IByteBufferCache ebRDCache =
-            ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
-        if (debug) System.err.println("EB RDcache " + ebRDCache);
-        if (debug) System.err.println("EB RDrcvd " + ebComp.getReadoutsReceived());
-        assertTrue("EB readout data buffer cache is unbalanced (" + ebRDCache +
-                   ")", ebRDCache.isBalanced());
-        assertTrue("EB readout data buffer cache is unused (" + ebRDCache +
-                   ")", ebRDCache.getTotalBuffersAcquired() > 0);
+        if (ebComp != null) {
+            ebGTCache =
+                ebComp.getByteBufferCache(DAQConnector.TYPE_GLOBAL_TRIGGER);
+            if (debug) System.err.println("EB GTcache " + ebGTCache);
+            assertTrue("EB trigger buffer cache is unbalanced (" + ebGTCache +
+                       ")", ebGTCache.isBalanced());
+            assertTrue("EB trigger buffer cache is unused (" + ebGTCache +
+                       ")", ebGTCache.getTotalBuffersAcquired() > 0);
 
-        IByteBufferCache ebEvtCache =
-            ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
-        if (debug) System.err.println("EB EVTcache " + ebEvtCache);
-        assertTrue("EB event buffer cache is unbalanced (" + ebEvtCache + ")",
-                   ebEvtCache.isBalanced());
-        assertTrue("EB event buffer cache is unused (" + ebEvtCache + ")",
-                   ebEvtCache.getTotalBuffersAcquired() > 0);
+            IByteBufferCache ebRDCache =
+                ebComp.getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+            if (debug) System.err.println("EB RDcache " + ebRDCache);
+            if (debug) System.err.println("EB RDrcvd " +
+                                          ebComp.getReadoutsReceived());
+            assertTrue("EB readout data buffer cache is unbalanced (" +
+                       ebRDCache + ")", ebRDCache.isBalanced());
+            assertTrue("EB readout data buffer cache is unused (" + ebRDCache +
+                       ")", ebRDCache.getTotalBuffersAcquired() > 0);
 
-        IByteBufferCache ebGenCache =
-            ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
-        if (debug) System.err.println("EB GENcache " + ebGenCache);
-        assertTrue("EB Generic buffer cache is unbalanced (" + ebGenCache + ")",
-                   ebGenCache.isBalanced());
-        assertTrue("EB Generic buffer cache is unused (" + ebGenCache + ")",
-                   ebGenCache.getTotalBuffersAcquired() > 0);
+            IByteBufferCache ebEvtCache =
+                ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
+            if (debug) System.err.println("EB EVTcache " + ebEvtCache);
+            assertTrue("EB event buffer cache is unbalanced (" + ebEvtCache +
+                       ")", ebEvtCache.isBalanced());
+            assertTrue("EB event buffer cache is unused (" + ebEvtCache + ")",
+                       ebEvtCache.getTotalBuffersAcquired() > 0);
 
-        assertEquals("Mismatch between readouts received and allocated",
-                     ebComp.getReadoutsReceived(),
-                     ebRDCache.getTotalBuffersAcquired());
+            IByteBufferCache ebGenCache =
+                ebComp.getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+            if (debug) System.err.println("EB GENcache " + ebGenCache);
+            assertTrue("EB Generic buffer cache is unbalanced (" + ebGenCache +
+                       ")", ebGenCache.isBalanced());
+            assertTrue("EB Generic buffer cache is unused (" + ebGenCache +
+                       ")", ebGenCache.getTotalBuffersAcquired() > 0);
 
-        if (gtComp != null) checkTriggerCaches(gtComp, "Global trigger", debug);
-        if (itComp != null) checkTriggerCaches(itComp, "Icetop trigger", debug);
-        if (iiComp != null) checkTriggerCaches(iiComp, "In-ice trigger", debug);
-        if (amComp != null) checkTriggerCaches(amComp, "Amanda trigger", debug);
+            assertEquals("Mismatch between readouts received and allocated",
+                         ebComp.getReadoutsReceived(),
+                         ebRDCache.getTotalBuffersAcquired());
+        }
 
-        assertEquals("Mismatch between triggers sent and events sent",
-                     (gtComp.getPayloadsSent() - 1),
-                     ebGTCache.getTotalBuffersAcquired());
+        if (gtComp != null) {
+            checkTriggerCaches(gtComp, "Global trigger", debug);
+        }
+        if (itComp != null) {
+            checkTriggerCaches(itComp, "Icetop trigger", debug);
+        }
+        if (iiComp != null) {
+            checkTriggerCaches(iiComp, "In-ice trigger", debug);
+        }
+        if (amComp != null) {
+            checkTriggerCaches(amComp, "Amanda trigger", debug);
+        }
 
-        for (int i = 0; shComps != null && i < shComps.length; i++) {
-            final String name = "SH#" + shComps[i].getHubId();
+        if (crossCheck && gtComp != null && ebGTCache != null) {
+            assertEquals("Mismatch between triggers sent and events sent",
+                         (gtComp.getPayloadsSent() - 1),
+                         ebGTCache.getTotalBuffersAcquired());
+        }
 
-            IByteBufferCache shRDCache =
-                shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
-            if (debug) System.err.println("SH RDcache " + shRDCache);
-            assertTrue(name + " readout data buffer cache is unbalanced (" +
-                       shRDCache + ")", shRDCache.isBalanced());
-//           assertTrue(name + " readout data buffer cache is unused (" +
-//                       shRDCache + ")",
-//                       shRDCache.getTotalBuffersAcquired() > 0);
+        if (shComps != null) {
+            for (int i = 0; i < shComps.length; i++) {
+                final String name = "SH#" + shComps[i].getHubId();
 
-            IByteBufferCache shGenCache =
-                shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
-            if (debug) System.err.println(name + " Gencache " + shGenCache);
-            assertTrue(name + " generic buffer cache is unbalanced (" +
+                IByteBufferCache shRDCache =
+                    shComps[i].getByteBufferCache(DAQConnector.TYPE_READOUT_DATA);
+                if (debug) System.err.println("SH RDcache " + shRDCache);
+                assertTrue(name + " readout data buffer cache is unbalanced" +
+                           " (" + shRDCache + ")", shRDCache.isBalanced());
+                //assertTrue(name + " readout data buffer cache is unused (" +
+                //           shRDCache + ")",
+                //           shRDCache.getTotalBuffersAcquired() > 0);
+
+                IByteBufferCache shGenCache =
+                    shComps[i].getByteBufferCache(DAQConnector.TYPE_GENERIC_CACHE);
+                if (debug) System.err.println(name + " Gencache " +
+                                              shGenCache);
+                assertTrue(name + " generic buffer cache is unbalanced (" +
                        shGenCache + ")", shGenCache.isBalanced());
-            assertTrue(name + " generic buffer cache is unused (" +
-                       shGenCache + ")",
-                       shGenCache.getTotalBuffersAcquired() > 0);
+                assertTrue(name + " generic buffer cache is unused (" +
+                           shGenCache + ")",
+                           shGenCache.getTotalBuffersAcquired() > 0);
 
-            IByteBufferCache shMoniCache =
-                shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
-            if (debug) System.err.println(name + " Monicache " + shMoniCache);
-            assertTrue(name + " MONI buffer cache is unbalanced (" +
-                       shMoniCache + ")", shMoniCache.isBalanced());
-            assertTrue(name + " MONI buffer cache was used (" +
-                       shMoniCache + ")",
-                       shMoniCache.getTotalBuffersAcquired() == 0);
+                IByteBufferCache shMoniCache =
+                    shComps[i].getByteBufferCache(DAQConnector.TYPE_MONI_DATA);
+                if (debug) System.err.println(name + " Monicache " +
+                                              shMoniCache);
+                assertTrue(name + " MONI buffer cache is unbalanced (" +
+                           shMoniCache + ")", shMoniCache.isBalanced());
+                assertTrue(name + " MONI buffer cache was used (" +
+                           shMoniCache + ")",
+                           shMoniCache.getTotalBuffersAcquired() == 0);
 
-            IByteBufferCache shTCalCache =
-                shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
-            if (debug) System.err.println(name + " TCalcache " + shTCalCache);
-            assertTrue(name + " TCal buffer cache is unbalanced (" +
-                       shTCalCache + ")", shTCalCache.isBalanced());
-            assertTrue(name + " TCal buffer cache was used (" +
-                       shTCalCache + ")",
-                       shTCalCache.getTotalBuffersAcquired() == 0);
+                IByteBufferCache shTCalCache =
+                    shComps[i].getByteBufferCache(DAQConnector.TYPE_TCAL_DATA);
+                if (debug) System.err.println(name + " TCalcache " +
+                                              shTCalCache);
+                assertTrue(name + " TCal buffer cache is unbalanced (" +
+                           shTCalCache + ")", shTCalCache.isBalanced());
+                assertTrue(name + " TCal buffer cache was used (" +
+                           shTCalCache + ")",
+                           shTCalCache.getTotalBuffersAcquired() == 0);
 
-            IByteBufferCache shSNCache =
-                shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
-            if (debug) System.err.println(name + " SNcache " + shSNCache);
-            assertTrue(name + " SN buffer cache is unbalanced (" +
-                       shSNCache + ")", shSNCache.isBalanced());
-            assertTrue(name + " SN buffer cache was used (" +
-                       shSNCache + ")",
-                       shSNCache.getTotalBuffersAcquired() == 0);
+                IByteBufferCache shSNCache =
+                    shComps[i].getByteBufferCache(DAQConnector.TYPE_SN_DATA);
+                if (debug) System.err.println(name + " SNcache " + shSNCache);
+                assertTrue(name + " SN buffer cache is unbalanced (" +
+                           shSNCache + ")", shSNCache.isBalanced());
+                assertTrue(name + " SN buffer cache was used (" +
+                           shSNCache + ")",
+                           shSNCache.getTotalBuffersAcquired() == 0);
+            }
         }
     }
 
@@ -361,6 +396,44 @@ public final class DAQTestUtil
         }
 
         return testPipe;
+    }
+
+    public static void destroyComponentIO(EBComponent ebComp,
+                                          GlobalTriggerComponent gtComp,
+                                          IcetopTriggerComponent itComp,
+                                          IniceTriggerComponent iiComp,
+                                          AmandaTriggerComponent amComp,
+                                          StringHubComponent[] shComps)
+    {
+        if (ebComp != null) {
+            ebComp.getTriggerReader().destroyProcessor();
+            ebComp.getRequestWriter().destroyProcessor();
+            ebComp.getDataReader().destroyProcessor();
+        }
+        if (gtComp != null) {
+            gtComp.getReader().destroyProcessor();
+            gtComp.getWriter().destroyProcessor();
+        }
+        if (itComp != null) {
+            itComp.getReader().destroyProcessor();
+            itComp.getWriter().destroyProcessor();
+        }
+        if (iiComp != null) {
+            iiComp.getReader().destroyProcessor();
+            iiComp.getWriter().destroyProcessor();
+        }
+        if (amComp != null) {
+            amComp.getReader().destroyProcessor();
+            amComp.getWriter().destroyProcessor();
+        }
+
+        if (shComps != null) {
+            for (int i = 0; i < shComps.length; i++) {
+                shComps[i].getHitWriter().destroyProcessor();
+                shComps[i].getRequestReader().destroyProcessor();
+                shComps[i].getDataWriter().destroyProcessor();
+            }
+        }
     }
 
     public static void glueComponents(String name,

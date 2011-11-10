@@ -155,6 +155,10 @@ public class InIceTriggerEndToEndTest
     public void testEndToEnd()
         throws DAQCompException, IOException, SplicerException, TriggerException
     {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         final int numTails = 10;
         final int numObjs = numTails * 10;
 
@@ -178,27 +182,29 @@ public class InIceTriggerEndToEndTest
 
         DAQTestUtil.startComponentIO(null, null, null, comp, null, null);
 
+        ActivityMonitor activity =
+            new ActivityMonitor(comp, null, null, null, null);
+
         // load data into input channels
         sendInIceData(tails, numObjs);
+
+        final int expTriggers = numObjs / NUM_HITS_PER_TRIGGER;
+
+        activity.waitForStasis(10, 100, expTriggers, dumpActivity,
+                               dumpSplicers);
+
         DAQTestUtil.sendStops(tails);
 
-        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
-                                     "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "IIStopMsg");
+        activity.waitForStasis(10, 100, expTriggers, dumpActivity,
+                               dumpSplicers);
 
         assertEquals("Bad number of payloads written",
-                     numObjs / NUM_HITS_PER_TRIGGER,
-                     comp.getPayloadsSent() - 1);
-
-        IByteBufferCache inCache = comp.getInputCache();
-        assertTrue("Input buffer cache is unbalanced (" + inCache + ")",
-                   inCache.isBalanced());
-
-        IByteBufferCache outCache = comp.getOutputCache();
-        assertTrue("Output buffer cache is unbalanced (" + outCache + ")",
-                   outCache.isBalanced());
+                     expTriggers, comp.getPayloadsSent() - 1);
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
+
+        DAQTestUtil.checkCaches(null, null, null, comp, null, null);
+        DAQTestUtil.destroyComponentIO(null, null, null, comp, null, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

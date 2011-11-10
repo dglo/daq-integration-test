@@ -65,7 +65,6 @@ public class WorldTest
 
     private static final int RUN_NUMBER = 1234;
 
-    private MinimalServer minServer;
     private IniceTriggerComponent iiComp;
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
@@ -289,13 +288,21 @@ public class WorldTest
         return new TestSuite(WorldTest.class);
     }
 
+    private void switchToNewRun(int runNum)
+        throws DAQCompException
+    {
+        iiComp.switching(runNum);
+        gtComp.switching(runNum);
+        ebComp.switching(runNum);
+        PayloadChecker.setRunNumber(runNum);
+    }
+
     protected void tearDown()
         throws Exception
     {
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
-        if (minServer != null) minServer.close();
         if (ebComp != null) ebComp.closeAll();
         if (gtComp != null) gtComp.closeAll();
         if (iiComp != null) iiComp.closeAll();
@@ -306,6 +313,8 @@ public class WorldTest
 
         DAQTestUtil.logOpenChannels();
 
+        PayloadChecker.clearRunNumber();
+
         super.tearDown();
     }
 
@@ -313,13 +322,11 @@ public class WorldTest
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
-        final int numEvents = 20;
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
         final boolean dumpBEStats = false;
 
-        minServer = new MinimalServer();
-        int port = minServer.getPort();
+        final int numEvents = 100;
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -337,6 +344,8 @@ public class WorldTest
 
         PayloadValidator validator = new TriggerValidator();
 
+        PayloadChecker.setRunNumber(RUN_NUMBER);
+
         // set up event builder
         ebComp = new EBComponent(true);
         ebComp.start(false);
@@ -347,8 +356,7 @@ public class WorldTest
         Map<ISourceID, RequestToDataBridge> bridgeMap =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
                                             ebComp.getDataReader(),
-                                            ebComp.getDataCache(),
-                                            hitList);
+                                            ebComp.getDataCache(), hitList);
 
         List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
 
@@ -383,61 +391,28 @@ public class WorldTest
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
 
-        ByteBuffer simpleBuf = ByteBuffer.allocate(HitData.SIMPLE_LENGTH);
-        for (HitData hd : hitList) {
-            simpleBuf.clear();
-            hd.putSimple(simpleBuf);
-            simpleBuf.flip();
-
-            boolean written = false;
-            for (int i = 0; i < iiTails.length; i++) {
-                ISourceID srcId = idList.get(i);
-                if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].sink().write(simpleBuf);
-                    written = true;
-                    break;
-                }
-            }
-
-            if (!written) {
-                fail("Couldn't write to source " + hd.getSourceID());
-            }
-        }
-
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
+        sendHits(idList, hitList, 0, hitList.size());
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
-        assertEquals("Missing in-ice trigger requests",
-                     numEvents - 1, iiComp.getPayloadsSent());
         assertEquals("Global trigger/event mismatch",
                      gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
 
         DAQTestUtil.sendStops(iiTails);
 
         activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
-        DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
-                                     "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getRequestWriter(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
-                                     ebComp.getDataSplicer(), "EBStopMsg");
-
-        while (ebComp.isBackEndRunning()) {
+        int ebRunChk = 0;
+        while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
             Thread.yield();
         }
 
         activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
-
         if (dumpBEStats) activity.dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",
@@ -449,6 +424,137 @@ public class WorldTest
         assertEquals("Missing events", numEvents, ebComp.getEventsSent());
 
         DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, null);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null,
+                                       null);
+
+        System.err.println("XXX Ignoring extra log msgs");
+        appender.clear();
+    }
+
+    public void testSwitchRun()
+        throws DAQCompException, DataFormatException, IOException,
+               SplicerException, TriggerException
+    {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
+        final int numEvents = 100;
+
+        File cfgFile =
+            DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
+                                        "sps-icecube-amanda-008");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        // get list of all hits
+        List<HitData> hitList = getInIceHits(domRegistry, numEvents);
+
+        PayloadValidator validator = new TriggerValidator();
+
+        PayloadChecker.setRunNumber(RUN_NUMBER);
+
+        // set up event builder
+        ebComp = new EBComponent(true);
+        ebComp.start(false);
+        ebComp.setRunNumber(RUN_NUMBER);
+        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+
+        Map<ISourceID, RequestToDataBridge> bridgeMap =
+            RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
+                                            ebComp.getDataReader(),
+                                            ebComp.getDataCache(), hitList);
+
+        List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
+
+        // set up global trigger
+        gtComp = new GlobalTriggerComponent();
+        gtComp.setGlobalConfigurationDir(cfgFile.getParent());
+        gtComp.start(false);
+
+        gtComp.configuring(cfgFile.getName());
+
+        DAQTestUtil.glueComponents("GT->EB",
+                                   gtComp.getWriter(), gtComp.getOutputCache(),
+                                   validator,
+                                   ebComp.getTriggerReader(),
+                                   ebComp.getTriggerCache());
+
+        // set up in-ice trigger
+        iiComp = new IniceTriggerComponent();
+        iiComp.setGlobalConfigurationDir(cfgFile.getParent());
+        iiComp.start(false);
+
+        iiComp.configuring(cfgFile.getName());
+
+        DAQTestUtil.glueComponents("IIT->GT",
+                                   iiComp.getWriter(), iiComp.getOutputCache(),
+                                   validator,
+                                   gtComp.getReader(), gtComp.getInputCache());
+
+        iiTails = DAQTestUtil.connectToReader(iiComp.getReader(),
+                                              iiComp.getInputCache(),
+                                              idList.size());
+
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
+
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
+
+        final int midpoint = hitList.size() / 2;
+        sendHits(idList, hitList, 0, midpoint);
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        final long prevTRsRcvd = ebComp.getTriggerRequestsReceived();
+        final long prevEvtsSent = ebComp.getEventsSent();
+
+        assertEquals("Global trigger/event mismatch",
+                     gtComp.getPayloadsSent() - 1, prevEvtsSent);
+
+        switchToNewRun(RUN_NUMBER + 3);
+
+        sendHits(idList, hitList, midpoint, hitList.size() - midpoint);
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        assertEquals("Global trigger/event mismatch",
+                     gtComp.getPayloadsSent() - 2,
+                     prevEvtsSent + ebComp.getEventsSent());
+
+        DAQTestUtil.sendStops(iiTails);
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+
+        int ebRunChk = 0;
+        while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
+            Thread.yield();
+        }
+
+        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        assertEquals("Missing in-ice trigger requests",
+                     numEvents + 1, iiComp.getPayloadsSent());
+        assertEquals("Missing global trigger requests",
+                     numEvents + 1, gtComp.getPayloadsSent());
+        assertEquals("Missing trigger requests in eventBuilder", numEvents - 1,
+                     prevTRsRcvd + ebComp.getTriggerRequestsReceived());
+        assertEquals("Missing events", numEvents - 1,
+                     prevEvtsSent + ebComp.getEventsSent());
+
+        DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, null,
+                                false);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null,
+                                       null);
 
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();

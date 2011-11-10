@@ -168,42 +168,6 @@ public abstract class DAQTestCase
         return pipeList;
     }
 
-    void destroyComponentIO(EBComponent ebComp,
-                            GlobalTriggerComponent gtComp,
-                            IcetopTriggerComponent itComp,
-                            IniceTriggerComponent iiComp,
-                            AmandaTriggerComponent amComp,
-                            StringHubComponent[] shComps)
-    {
-        if (ebComp != null) {
-            ebComp.getTriggerReader().destroyProcessor();
-            ebComp.getRequestWriter().destroyProcessor();
-            ebComp.getDataReader().destroyProcessor();
-        }
-        if (gtComp != null) {
-            gtComp.getReader().destroyProcessor();
-            gtComp.getWriter().destroyProcessor();
-        }
-        if (itComp != null) {
-            itComp.getReader().destroyProcessor();
-            itComp.getWriter().destroyProcessor();
-        }
-        if (iiComp != null) {
-            iiComp.getReader().destroyProcessor();
-            iiComp.getWriter().destroyProcessor();
-        }
-        if (amComp != null) {
-            amComp.getReader().destroyProcessor();
-            amComp.getWriter().destroyProcessor();
-        }
-
-        for (int i = 0; i < shComps.length; i++) {
-            shComps[i].getHitWriter().destroyProcessor();
-            shComps[i].getRequestReader().destroyProcessor();
-            shComps[i].getDataWriter().destroyProcessor();
-        }
-    }
-
     abstract int getNumberOfAmandaTriggerSent();
 
     abstract int getNumberOfExpectedEvents();
@@ -442,6 +406,14 @@ public abstract class DAQTestCase
         appender.setVerbose(val);
     }
 
+    private void switchToNewRun(int runNum)
+        throws DAQCompException
+    {
+        iiComp.switching(runNum);
+        gtComp.switching(runNum);
+        ebComp.switching(runNum);
+    }
+
     protected void tearDown()
         throws Exception
     {
@@ -473,6 +445,8 @@ public abstract class DAQTestCase
             try { amTail.close(); } catch (Exception ex) { }
         }
 
+        DAQTestUtil.logOpenChannels();
+
         super.tearDown();
     }
 
@@ -480,10 +454,11 @@ public abstract class DAQTestCase
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
-        final int numEvents = getNumberOfExpectedEvents();
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
         final boolean dumpBEStats = false;
+
+        final int numEvents = getNumberOfExpectedEvents();
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
@@ -635,60 +610,8 @@ public abstract class DAQTestCase
         activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
-        for (int i = 0; i < shComps.length; i++) {
-            int hubNum = shComps[i].getHubId() % 100;
-
-            monitorHub(shComps[i], hubNum, true, 10);
-            DAQTestUtil.waitUntilStopped(shComps[i].getHitWriter(), null,
-                                         "SH#" + hubNum + "HitStop");
-        }
-
-        if (amComp != null) {
-            monitorTrigger(amComp, 10);
-            DAQTestUtil.waitUntilStopped(amComp.getReader(),
-                                         amComp.getSplicer(), "AMStopMsg");
-            DAQTestUtil.waitUntilStopped(amComp.getWriter(), null, "AMStopMsg");
-        }
-
-        if (itComp != null) {
-            monitorTrigger(itComp, 10);
-            DAQTestUtil.waitUntilStopped(itComp.getReader(),
-                                         itComp.getSplicer(), "ITStopMsg");
-            DAQTestUtil.waitUntilStopped(itComp.getWriter(), null, "ITStopMsg");
-        }
-
-        if (iiComp != null) {
-            monitorTrigger(iiComp, 10);
-            DAQTestUtil.waitUntilStopped(iiComp.getReader(),
-                                         iiComp.getSplicer(), "IIStopMsg");
-            DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIStopMsg");
-        }
-
-        monitorTrigger(gtComp, 10);
-        DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
-
-        for (int i = 0; i < shComps.length; i++) {
-            int hubNum = shComps[i].getHubId() % 100;
-
-            monitorHub(shComps[i], hubNum, false, 10);
-            DAQTestUtil.waitUntilStopped(shComps[i].getDataWriter(), null,
-                                         "SH#" + hubNum + "DataStop");
-        }
-
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
-        if (dumpBEStats) activity.dumpBackEndStats();
-
-        monitorEventBuilder(ebComp, 10);
-        DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getRequestWriter(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
-                                     ebComp.getDataSplicer(), "EBStopMsg");
-
-        while (ebComp.isBackEndRunning()) {
+        int ebRunChk = 0;
+        while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
             Thread.yield();
         }
 
@@ -725,6 +648,7 @@ public abstract class DAQTestCase
 
         DAQTestUtil.checkCaches(ebComp, gtComp, itComp, iiComp, amComp,
                                 shComps);
-        destroyComponentIO(ebComp, gtComp, itComp, iiComp, amComp, shComps);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, itComp, iiComp, amComp,
+                                       shComps);
     }
 }

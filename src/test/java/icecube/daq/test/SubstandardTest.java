@@ -2283,18 +2283,6 @@ public class SubstandardTest
 
         activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
 
-        DAQTestUtil.waitUntilStopped(amComp.getReader(), amComp.getSplicer(),
-                                     "AMStopMsg");
-        DAQTestUtil.waitUntilStopped(amComp.getWriter(), null, "AMStopMsg");
-        DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
-                                     "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
-
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
-
         assertEquals("Unexpected number of in-ice triggers",
                      16, iiComp.getPayloadsSent() - 1);
         assertEquals("Unexpected number of Amanda triggers",
@@ -2305,6 +2293,10 @@ public class SubstandardTest
         assertFalse("Found invalid global trigger(s)",
                     gtValidator.foundInvalid());
         assertFalse("Found invalid trigger(s)", trValidator.foundInvalid());
+
+        DAQTestUtil.checkCaches(null, gtComp, null, iiComp, amComp, null);
+        DAQTestUtil.destroyComponentIO(null, gtComp, null, iiComp, amComp,
+                                       null);
 
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();

@@ -325,6 +325,8 @@ public class GlobalTriggerPhysicsDataTest
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 
+        DAQTestUtil.destroyComponentIO(null, comp, null, null, null, null);
+
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
         } else {

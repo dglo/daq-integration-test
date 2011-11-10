@@ -713,6 +713,35 @@ public class EBReadonlyTest
         return new ArrayList(map.keySet());
     }
 
+    private void sendHits(List<ISourceID> idList, List<HitData> hitList,
+                          int startIndex, int numToSend)
+        throws IOException
+    {
+        ByteBuffer simpleBuf = ByteBuffer.allocate(HitData.SIMPLE_LENGTH);
+
+        for (int h = 0; h < numToSend; h++) {
+            HitData hd = hitList.get(startIndex + h);
+
+            simpleBuf.clear();
+            hd.putSimple(simpleBuf);
+            simpleBuf.flip();
+
+            boolean written = false;
+            for (int i = 0; i < iiTails.length; i++) {
+                ISourceID srcId = idList.get(i);
+                if (srcId.getSourceID() == hd.getSourceID()) {
+                    iiTails[i].sink().write(simpleBuf);
+                    written = true;
+                    break;
+                }
+            }
+
+            if (!written) {
+                fail("Couldn't write to source " + hd.getSourceID());
+            }
+        }
+    }
+
     protected void setUp()
         throws Exception
     {
@@ -765,6 +794,10 @@ public class EBReadonlyTest
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         final int numEventsBeforeReadOnly = 10;
 
         File cfgFile =
@@ -835,32 +868,20 @@ public class EBReadonlyTest
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
 
-        ByteBuffer simpleBuf = ByteBuffer.allocate(HitData.SIMPLE_LENGTH);
-        for (HitData hd : hitList) {
-            simpleBuf.clear();
-            hd.putSimple(simpleBuf);
-            simpleBuf.flip();
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
 
-            boolean written = false;
-            for (int i = 0; i < iiTails.length; i++) {
-                ISourceID srcId = idList.get(i);
-                if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].sink().write(simpleBuf);
-                    written = true;
-                    break;
-                }
-            }
+        sendHits(idList, hitList, 0, hitList.size());
 
-            if (!written) {
-                fail("Couldn't write to source " + hd.getSourceID());
-            }
-        }
+        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
         DAQTestUtil.sendStops(iiTails);
 
-        ActivityMonitor activity =
-            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
-        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, false, false);
+        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
         DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
                                      "IIInStopMsg", "", 1000, 100);
@@ -893,6 +914,9 @@ public class EBReadonlyTest
         assertTrue("GTOutCache does not have a backlog",
                    gtComp.getOutputCache().getCurrentAquiredBuffers() > 0);
 */
+
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null,
+                                       null);
 
         // Ignore extra log msgs
         appender.clear();

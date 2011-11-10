@@ -4748,6 +4748,10 @@ public class GlobalTriggerEndToEndTest
         throws DAQCompException, DataFormatException, IOException,
                SplicerException, TriggerException
     {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         final int numTails = 1;
 
         File cfgFile =
@@ -4770,6 +4774,9 @@ public class GlobalTriggerEndToEndTest
 
         DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
 
+        ActivityMonitor activity =
+            new ActivityMonitor(null, null, null, comp, null);
+
         int expTriggers = 565;
 
         for (ByteBuffer bb : getTriggerList()) {
@@ -4777,11 +4784,13 @@ public class GlobalTriggerEndToEndTest
             tails[0].sink().write(bb);
         }
 
+        activity.waitForStasis(10, 100, expTriggers, dumpActivity,
+                               dumpSplicers);
+
         DAQTestUtil.sendStops(tails);
 
-        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
+        activity.waitForStasis(10, 100, expTriggers, dumpActivity,
+                               dumpSplicers);
 
         try {
             Thread.sleep(1000);
@@ -4792,13 +4801,8 @@ public class GlobalTriggerEndToEndTest
         assertEquals("Unexpected number of global triggers",
                      expTriggers, comp.getPayloadsSent() - 1);
 
-        IByteBufferCache inCache = comp.getInputCache();
-        assertTrue("Input buffer cache is unbalanced (" + inCache + ")",
-                   inCache.isBalanced());
-
-        IByteBufferCache outCache = comp.getOutputCache();
-        assertTrue("Output buffer cache is unbalanced (" + outCache + ")",
-                   outCache.isBalanced());
+        DAQTestUtil.checkCaches(null, comp, null, null, null, null);
+        DAQTestUtil.destroyComponentIO(null, comp, null, null, null, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
