@@ -102,7 +102,8 @@ public class EventBuilderEndToEndTest
                 !msg.equals("The last temp-physics file was not moved" +
                             " to the dispatch storage!!!") &&
                 !msg.startsWith("Couldn't stop dispatcher (") &&
-                !msg.startsWith("Switching from run "))
+                !msg.startsWith("Switching from run ") &&
+                !msg.startsWith("GoodTime Stats: "))
             {
                 fail("Bad log message#" + i + ": " + appender.getMessage(i));
             }
