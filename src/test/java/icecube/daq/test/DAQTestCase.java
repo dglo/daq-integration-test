@@ -16,12 +16,11 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.sender.Sender;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
-import icecube.daq.trigger.component.AmandaTriggerComponent;
+import icecube.daq.trigger.common.ITriggerManager;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
-import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.IDOMRegistry;
@@ -58,7 +57,6 @@ public abstract class DAQTestCase
     private StringHubComponent[] shComps;
     private IniceTriggerComponent iiComp;
     private IcetopTriggerComponent itComp;
-    private AmandaTriggerComponent amComp;
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
     private MinimalServer minServer;
@@ -168,15 +166,10 @@ public abstract class DAQTestCase
         return pipeList;
     }
 
-    abstract int getNumberOfAmandaTriggerSent();
-
     abstract int getNumberOfExpectedEvents();
 
     abstract void initialize(IDOMRegistry domRegistry)
         throws DataFormatException, IOException;
-
-    abstract void initializeAmandaInput(WritableByteChannel amTail)
-        throws IOException;
 
     void monitorEventBuilder(EBComponent comp, int maxTries)
     {
@@ -326,7 +319,7 @@ public abstract class DAQTestCase
     {
         boolean isFinished = false;
         int prevRcvd = 0;
-        int prevProc = 0;
+        long prevProc = 0;
         long prevSent = 0;
         int numTries = 0;
 
@@ -341,7 +334,7 @@ public abstract class DAQTestCase
 
             final boolean isRunning = reader.isRunning();
             final int numRcvd = (int) reader.getTotalRecordsReceived();
-            final int numProc = trigMgr.getCount();
+            final long numProc = trigMgr.getTotalProcessed();
             final long numSent = comp.getPayloadsSent();
 
             //System.err.println(comp.toString() + " (#" + numTries + ")");
@@ -375,8 +368,6 @@ public abstract class DAQTestCase
             }
         }
     }
-
-    abstract boolean needAmandaTrig();
 
     abstract void sendData(StringHubComponent[] shComps)
         throws DataFormatException, IOException;
@@ -424,7 +415,6 @@ public abstract class DAQTestCase
 
         if (ebComp != null) ebComp.closeAll();
         if (gtComp != null) gtComp.closeAll();
-        if (amComp != null) amComp.closeAll();
         if (itComp != null) itComp.closeAll();
         if (iiComp != null) iiComp.closeAll();
 
@@ -566,47 +556,17 @@ public abstract class DAQTestCase
                                        gtComp.getInputCache());
         }
 
-        if (!needAmandaTrig()) {
-            amComp = null;
-        } else {
-            // build amanda server
-            minServer = new MinimalServer();
-            int port = minServer.getPort();
-
-            // set up amanda trigger
-            amComp = new AmandaTriggerComponent("localhost", port);
-            amComp.setGlobalConfigurationDir(cfgFile.getParent());
-            amComp.start(false);
-
-            amComp.configuring(cfgFile.getName());
-
-            DAQTestUtil.glueComponents("AM->GT",
-                                       amComp.getWriter(),
-                                       amComp.getOutputCache(),
-                                       validator,
-                                       gtComp.getReader(),
-                                       gtComp.getInputCache());
-        }
-
         // finish setup
         pipeList =
             connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, amComp,
-                                     shComps);
-
-        // finish amanda initialization
-        if (amComp != null) {
-            amTail = minServer.acceptChannel();
-
-            initializeAmandaInput(amTail);
-        }
+        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, shComps);
 
         // start sending input data
         sendData(shComps);
 
         ActivityMonitor activity =
-            new ActivityMonitor(iiComp, itComp, amComp, gtComp, ebComp);
+            new ActivityMonitor(iiComp, itComp, gtComp, ebComp);
         activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
@@ -621,7 +581,6 @@ public abstract class DAQTestCase
         if (false) {
             if (iiComp != null) System.err.println("II " + iiComp);
             if (itComp != null) System.err.println("IT " + itComp);
-            if (amComp != null) System.err.println("AM " + amComp);
             System.err.println("GT " + gtComp);
             System.err.println("EB " + ebComp);
         }
@@ -646,9 +605,7 @@ public abstract class DAQTestCase
         System.err.println("XXX Ignoring extra log msgs");
         appender.clear();
 
-        DAQTestUtil.checkCaches(ebComp, gtComp, itComp, iiComp, amComp,
-                                shComps);
-        DAQTestUtil.destroyComponentIO(ebComp, gtComp, itComp, iiComp, amComp,
-                                       shComps);
+        DAQTestUtil.checkCaches(ebComp, gtComp, itComp, iiComp, shComps);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, itComp, iiComp, shComps);
     }
 }

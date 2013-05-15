@@ -9,7 +9,6 @@ import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.stringhub.StringHubComponent;
-import icecube.daq.trigger.component.AmandaTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
@@ -124,18 +123,16 @@ public final class DAQTestUtil
                                    GlobalTriggerComponent gtComp,
                                    IcetopTriggerComponent itComp,
                                    IniceTriggerComponent iiComp,
-                                   AmandaTriggerComponent amComp,
                                    StringHubComponent[] shComps)
         throws DAQCompException
     {
-        checkCaches(ebComp, gtComp, itComp, iiComp, amComp, shComps, true);
+        checkCaches(ebComp, gtComp, itComp, iiComp, shComps, true);
     }
 
     public static void checkCaches(EBComponent ebComp,
                                    GlobalTriggerComponent gtComp,
                                    IcetopTriggerComponent itComp,
                                    IniceTriggerComponent iiComp,
-                                   AmandaTriggerComponent amComp,
                                    StringHubComponent[] shComps,
                                    boolean crossCheck)
         throws DAQCompException
@@ -198,9 +195,6 @@ public final class DAQTestUtil
         }
         if (iiComp != null) {
             checkTriggerCaches(iiComp, "In-ice trigger", debug);
-        }
-        if (amComp != null) {
-            checkTriggerCaches(amComp, "Amanda trigger", debug);
         }
 
         if (crossCheck && gtComp != null && ebGTCache != null) {
@@ -402,7 +396,6 @@ public final class DAQTestUtil
                                           GlobalTriggerComponent gtComp,
                                           IcetopTriggerComponent itComp,
                                           IniceTriggerComponent iiComp,
-                                          AmandaTriggerComponent amComp,
                                           StringHubComponent[] shComps)
     {
         if (ebComp != null) {
@@ -421,10 +414,6 @@ public final class DAQTestUtil
         if (iiComp != null) {
             iiComp.getReader().destroyProcessor();
             iiComp.getWriter().destroyProcessor();
-        }
-        if (amComp != null) {
-            amComp.getReader().destroyProcessor();
-            amComp.getWriter().destroyProcessor();
         }
 
         if (shComps != null) {
@@ -529,7 +518,6 @@ public final class DAQTestUtil
                                         GlobalTriggerComponent gtComp,
                                         IcetopTriggerComponent itComp,
                                         IniceTriggerComponent iiComp,
-                                        AmandaTriggerComponent amComp,
                                         StringHubComponent[] shComps)
         throws IOException
     {
@@ -552,10 +540,6 @@ public final class DAQTestUtil
         if (iiComp != null) {
             procList.add(iiComp.getReader());
             procList.add(iiComp.getWriter());
-        }
-        if (amComp != null) {
-            procList.add(amComp.getReader());
-            procList.add(amComp.getWriter());
         }
         if (shComps != null) {
             for (int i = 0; i < shComps.length; i++) {

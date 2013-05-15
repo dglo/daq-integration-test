@@ -64,20 +64,6 @@ public class GlobalTriggerPhysicsDataTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
-
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("Resetting decrement ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.contains("I3 GlobalTrigger Run Summary"))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
-            }
-        }
-        appender.clear();
     }
 
     private void dumpStreams(java.io.PrintStream out)
@@ -248,6 +234,8 @@ public class GlobalTriggerPhysicsDataTest
 
         comp.configuring(cfgFile.getName());
 
+        comp.setRunNumber(12345);
+
         tails = DAQTestUtil.connectToReader(comp.getReader(),
                                             comp.getInputCache(), numTails);
 
@@ -256,7 +244,7 @@ public class GlobalTriggerPhysicsDataTest
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
+        DAQTestUtil.startComponentIO(null, comp, null, null, null);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 
@@ -302,11 +290,11 @@ public class GlobalTriggerPhysicsDataTest
             expEvents = numEventsInFile;
         } else {
             // hack for file with bogus events (the 1% out-of-order bug)
-            expEvents = 2481;
+            expEvents = 2483;
         }
 
         ActivityMonitor activity =
-            new ActivityMonitor(null, null, null, comp, null);
+            new ActivityMonitor(null, null, comp, null);
         activity.waitForStasis(5, 150, expEvents, false, false);
 
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
@@ -325,12 +313,14 @@ public class GlobalTriggerPhysicsDataTest
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 
-        DAQTestUtil.destroyComponentIO(null, comp, null, null, null, null);
+        DAQTestUtil.destroyComponentIO(null, comp, null, null, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
-        } else {
-            checkLogMessages();
+        } else if (appender.getNumberOfMessages() > 0) {
+            fail(String.format("Got %d unexpected log message, first=%s",
+                               appender.getNumberOfMessages(),
+                               appender.getMessage(0)));
         }
     }
 
@@ -498,7 +488,6 @@ public class GlobalTriggerPhysicsDataTest
                 }
 
                 buf.clear();
-
                 try {
                     pay.writePayload(true, 0, buf);
                     write(buf);

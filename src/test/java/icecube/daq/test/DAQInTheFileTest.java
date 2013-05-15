@@ -68,15 +68,6 @@ public class DAQInTheFileTest
         return shComps;
     }
 
-    int getNumberOfAmandaTriggerSent()
-    {
-        if (amInput == null) {
-            return 0;
-        }
-
-        return amInput.getNumberWritten();
-    }
-
     int getNumberOfExpectedEvents()
     {
         return 509;
@@ -100,9 +91,7 @@ public class DAQInTheFileTest
         shMap = new HashMap<ISourceID, File>();
 
         for (File f : dataDir.listFiles()) {
-            if (f.getName().equals("TRIG-amandaTrigger#0")) {
-                amTrigFile = f;
-            } else if (f.getName().startsWith("HIT-stringHub#")) {
+            if (f.getName().startsWith("HIT-stringHub#")) {
                 int num;
                 try {
                     num = Integer.parseInt(f.getName().substring(14));
@@ -116,14 +105,6 @@ public class DAQInTheFileTest
             } else {
                 System.err.println("Unknown data file " + f);
             }
-        }
-    }
-
-    void initializeAmandaInput(WritableByteChannel amTail)
-        throws IOException
-    {
-        if (amTrigFile != null) {
-            amInput = new PayloadFileBridge(amTrigFile, amTail);
         }
     }
 
@@ -212,11 +193,6 @@ public class DAQInTheFileTest
             throw new Error("Input bridges have not stopped after " + maxTries +
                             " tries");
         }
-    }
-
-    boolean needAmandaTrig()
-    {
-        return amTrigFile != null;
     }
 
     void sendData(StringHubComponent[] shComps)

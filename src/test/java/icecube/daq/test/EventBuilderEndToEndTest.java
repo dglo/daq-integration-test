@@ -324,12 +324,11 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startComponentIO(comp, null, null, null, null, null);
+        DAQTestUtil.startComponentIO(comp, null, null, null, null);
 
         sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP, NUM_TRIGGERS);
 
-        ActivityMonitor activity =
-            new ActivityMonitor(null, null, null, null, comp);
+        ActivityMonitor activity = new ActivityMonitor(null, null, null, comp);
         activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
@@ -340,8 +339,8 @@ public class EventBuilderEndToEndTest
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
-        DAQTestUtil.checkCaches(comp, null, null, null, null, null);
-        DAQTestUtil.destroyComponentIO(comp, null, null, null, null, null);
+        DAQTestUtil.checkCaches(comp, null, null, null, null);
+        DAQTestUtil.destroyComponentIO(comp, null, null, null, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();
@@ -387,13 +386,13 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startComponentIO(comp, null, null, null, null, null);
+        DAQTestUtil.startComponentIO(comp, null, null, null, null);
 
         long curTime = sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP,
                                           NUM_TRIGGERS / 2);
 
         ActivityMonitor activity =
-            new ActivityMonitor(null, null, null, null, comp);
+            new ActivityMonitor(null, null, null, comp);
         activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
@@ -412,8 +411,8 @@ public class EventBuilderEndToEndTest
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
-        DAQTestUtil.checkCaches(comp, null, null, null, null, null);
-        DAQTestUtil.destroyComponentIO(comp, null, null, null, null, null);
+        DAQTestUtil.checkCaches(comp, null, null, null, null);
+        DAQTestUtil.destroyComponentIO(comp, null, null, null, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

@@ -180,10 +180,10 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, null, null, comp, null, null);
+        DAQTestUtil.startComponentIO(null, null, null, comp, null);
 
         ActivityMonitor activity =
-            new ActivityMonitor(comp, null, null, null, null);
+            new ActivityMonitor(comp, null, null, null);
 
         // load data into input channels
         sendInIceData(tails, numObjs);
@@ -203,8 +203,8 @@ public class InIceTriggerEndToEndTest
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 
-        DAQTestUtil.checkCaches(null, null, null, comp, null, null);
-        DAQTestUtil.destroyComponentIO(null, null, null, comp, null, null);
+        DAQTestUtil.checkCaches(null, null, null, comp, null);
+        DAQTestUtil.destroyComponentIO(null, null, null, comp, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

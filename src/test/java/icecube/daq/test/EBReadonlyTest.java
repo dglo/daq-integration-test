@@ -24,7 +24,6 @@ import icecube.daq.splicer.StrandTail;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.config.TriggerReadout;
-import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistry;
@@ -866,10 +865,10 @@ public class EBReadonlyTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null);
 
         ActivityMonitor activity =
-            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
+            new ActivityMonitor(iiComp, null, gtComp, ebComp);
 
         sendHits(idList, hitList, 0, hitList.size());
 
@@ -915,8 +914,7 @@ public class EBReadonlyTest
                    gtComp.getOutputCache().getCurrentAquiredBuffers() > 0);
 */
 
-        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null,
-                                       null);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);
 
         // Ignore extra log msgs
         appender.clear();

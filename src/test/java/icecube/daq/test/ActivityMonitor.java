@@ -3,7 +3,6 @@ package icecube.daq.test;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.component.AmandaTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
@@ -42,8 +41,8 @@ class TriggerMonitor
                 received = comp.getPayloadsReceived();
                 changed = true;
             }
-            if (processed != comp.getTriggerManager().getCount()) {
-                processed = comp.getTriggerManager().getCount();
+            if (processed != comp.getTriggerManager().getTotalProcessed()) {
+                processed = comp.getTriggerManager().getTotalProcessed();
                 changed = true;
             }
             if (sent != comp.getPayloadsSent()) {
@@ -273,19 +272,16 @@ public class ActivityMonitor
 {
     private TriggerMonitor iiMon;
     private TriggerMonitor itMon;
-    private TriggerMonitor amMon;
     private TriggerMonitor gtMon;
     private EventBuilderMonitor ebMon;
 
     ActivityMonitor(IniceTriggerComponent iiComp,
                     IcetopTriggerComponent itComp,
-                    AmandaTriggerComponent amComp,
                     GlobalTriggerComponent gtComp,
                     EBComponent ebComp)
     {
         this.iiMon = new TriggerMonitor(iiComp, "II");
         this.itMon = new TriggerMonitor(itComp, "IT");
-        this.amMon = new TriggerMonitor(amComp, "AM");
         this.gtMon = new TriggerMonitor(gtComp, "GT");
         this.ebMon = new EventBuilderMonitor(ebComp, "EB");
     }
@@ -297,8 +293,7 @@ public class ActivityMonitor
 
     private void dumpProgress(int rep, int expEvents, boolean dumpSplicers)
     {
-        System.err.println("#" + rep + ":" + iiMon + itMon + amMon + gtMon +
-                           ebMon);
+        System.err.println("#" + rep + ":" + iiMon + itMon + gtMon + ebMon);
 
         if (dumpSplicers && iiMon.getSent() < expEvents + 1) {
             dumpSplicer("II", iiMon.getSplicer());
@@ -306,10 +301,6 @@ public class ActivityMonitor
 
         if (dumpSplicers && itMon.getSent() < expEvents + 1) {
             dumpSplicer("IT", itMon.getSplicer());
-        }
-
-        if (dumpSplicers && amMon.getSent() < expEvents + 1) {
-            dumpSplicer("AM", amMon.getSplicer());
         }
 
         if (dumpSplicers && gtMon.getSent() < iiMon.getSent()) {
@@ -343,15 +334,13 @@ public class ActivityMonitor
 
             changed |= iiMon.check();
             changed |= itMon.check();
-            changed |= amMon.check();
             changed |= gtMon.check();
             changed |= ebMon.check();
 
             if (changed) {
                 numStatic = 0;
             } else if (iiMon.isStopped() && itMon.isStopped() &&
-                       amMon.isStopped() && gtMon.isStopped() &&
-                       ebMon.isStopped())
+                       gtMon.isStopped() && ebMon.isStopped())
             {
                 numStatic += staticReps / 2;
             } else {
