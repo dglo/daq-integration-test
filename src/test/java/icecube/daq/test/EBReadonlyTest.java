@@ -821,6 +821,7 @@ public class EBReadonlyTest
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+        ebComp.setAlerter(new MockAlerter());
 
         IByteBufferCache evtDataCache =
             ebComp.getDispatcher().getByteBufferCache();
@@ -841,6 +842,7 @@ public class EBReadonlyTest
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
         gtComp.setRunNumber(RUN_NUMBER);
+        gtComp.setAlerter(new MockAlerter());
 
         gtComp.configuring(cfgFile.getName());
 
@@ -855,6 +857,7 @@ public class EBReadonlyTest
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
         iiComp.setRunNumber(RUN_NUMBER);
+        iiComp.setAlerter(new MockAlerter());
 
         iiComp.configuring(cfgFile.getName());
 

@@ -469,6 +469,7 @@ public abstract class DAQTestCase
         shComps = buildStringHubComponents();
         for (int i = 0; i < shComps.length; i++) {
             shComps[i].setGlobalConfigurationDir(cfgFile.getParent());
+            shComps[i].setAlerter(new MockAlerter());
         }
 
         // check for required trigger components
@@ -504,6 +505,7 @@ public abstract class DAQTestCase
         ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+        ebComp.setAlerter(new MockAlerter());
 
         ebComp.configuring(cfgFile.getName());
 
@@ -527,6 +529,7 @@ public abstract class DAQTestCase
             itComp = new IcetopTriggerComponent();
             itComp.setGlobalConfigurationDir(cfgFile.getParent());
             itComp.start(false);
+            itComp.setAlerter(new MockAlerter());
 
             itComp.configuring(cfgFile.getName());
 
@@ -545,6 +548,7 @@ public abstract class DAQTestCase
             iiComp = new IniceTriggerComponent();
             iiComp.setGlobalConfigurationDir(cfgFile.getParent());
             iiComp.start(false);
+            iiComp.setAlerter(new MockAlerter());
 
             iiComp.configuring(cfgFile.getName());
 
