@@ -513,6 +513,7 @@ public abstract class DAQTestCase
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
+        gtComp.setAlerter(new MockAlerter());
 
         gtComp.configuring(cfgFile.getName());
 

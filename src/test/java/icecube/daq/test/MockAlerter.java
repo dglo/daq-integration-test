@@ -8,56 +8,130 @@ import java.util.Map;
 public class MockAlerter
     implements Alerter
 {
+    private boolean closed;
+
     public MockAlerter()
     {
     }
 
+    /**
+     * Close any open files/sockets.
+     */
     public void close()
     {
-        // do nothing
+        closed = true;
     }
 
+    /**
+     * Get the service name
+     *
+     * @return service name
+     */
     public String getService()
     {
         throw new Error("Unimplemented");
     }
 
+    /**
+     * If <tt>true</tt>, alerts will be sent to one or more recipients.
+     *
+     * @return <tt>true</tt> if this alerter will send messages
+     */
     public boolean isActive()
     {
-        throw new Error("Unimplemented");
+        return !closed;
     }
 
-    public void send(String s0, Alerter.Priority x1, Calendar x2, Map x3)
+    /**
+     * Send a message to IceCube Live.
+     *
+     * @param varname variable name
+     * @param priority priority level
+     * @param dateTime date and time for message
+     * @param values map of names to values
+     */
+    public void send(String varname, Alerter.Priority priority,
+                     Calendar dateTime, Map<String, Object> vars)
         throws AlertException
     {
         throw new Error("Unimplemented");
     }
 
-    public void send(String s0, Alerter.Priority x1, Map x2)
+    /**
+     * Send a message to IceCube Live.
+     *
+     * @param varname variable name
+     * @param priority priority level
+     * @param values map of names to values
+     */
+    public void send(String varname, Alerter.Priority priority,
+                     Map<String, Object> vars)
+        throws AlertException
+    {
+        System.out.format("Sent %s prio %s\n", varname, priority);
+    }
+
+    /**
+     * Send an alert.
+     *
+     * @param priority priority level
+     * @param condition I3Live condition
+     * @param vars map of variable names to values
+     *
+     * @throws AlertException if there is a problem with one of the parameters
+     */
+    public void sendAlert(Alerter.Priority priority, String condition,
+                          Map<String, Object> vars)
         throws AlertException
     {
         throw new Error("Unimplemented");
     }
 
-    public void sendAlert(Alerter.Priority x0, String s1, Map x2)
+    /**
+     * Send an alert.
+     *
+     * @param priority priority level
+     * @param condition I3Live condition
+     * @param notify list of email addresses which receive notification
+     * @param vars map of variable names to values
+     *
+     * @throws AlertException if there is a problem with one of the parameters
+     */
+    public void sendAlert(Alerter.Priority priority, String condition,
+                          String notify, Map<String, Object> vars)
         throws AlertException
     {
         throw new Error("Unimplemented");
     }
 
-    public void sendAlert(Alerter.Priority x0, String s1, String s2, Map x3)
+    /**
+     * Send an alert.
+     *
+     * @param dateTime date and time for message
+     * @param priority priority level
+     * @param condition I3Live condition
+     * @param notify list of email addresses which receive notification
+     * @param vars map of variable names to values
+     *
+     * @throws AlertException if there is a problem with one of the parameters
+     */
+    public void sendAlert(Calendar dateTime, Alerter.Priority priority,
+                          String condition, String notify,
+                          Map<String, Object> vars)
         throws AlertException
     {
         throw new Error("Unimplemented");
     }
 
-    public void sendAlert(Calendar x0, Alerter.Priority x1, String s2, String s3, Map x4)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void setAddress(String s0, int i1)
+    /**
+     * Set monitoring server host and port
+     *
+     * @param host - server host name
+     * @param port - server port number
+     *
+     * @throws AlertException if there is a problem with one of the parameters
+     */
+    public void setAddress(String host, int port)
         throws AlertException
     {
         throw new Error("Unimplemented");
