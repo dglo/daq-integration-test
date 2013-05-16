@@ -840,6 +840,7 @@ public class EBReadonlyTest
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
+        gtComp.setRunNumber(RUN_NUMBER);
 
         gtComp.configuring(cfgFile.getName());
 
@@ -853,6 +854,7 @@ public class EBReadonlyTest
         iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
+        iiComp.setRunNumber(RUN_NUMBER);
 
         iiComp.configuring(cfgFile.getName());
 
