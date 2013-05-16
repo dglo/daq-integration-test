@@ -168,6 +168,7 @@ public class InIceTriggerEndToEndTest
 
         // set up in-ice trigger
         comp = new IniceTriggerComponent();
+        comp.setAlerter(new MockAlerter());
         comp.setGlobalConfigurationDir(cfgFile.getParent());
         comp.start(false);
 
