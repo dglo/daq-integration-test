@@ -41,8 +41,16 @@ class TriggerMonitor
                 received = comp.getPayloadsReceived();
                 changed = true;
             }
+            if (queuedIn != comp.getTriggerManager().getNumInputsQueued()) {
+                queuedIn = comp.getTriggerManager().getNumInputsQueued();
+                changed = true;
+            }
             if (processed != comp.getTriggerManager().getTotalProcessed()) {
                 processed = comp.getTriggerManager().getTotalProcessed();
+                changed = true;
+            }
+            if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
+                queuedOut = comp.getTriggerManager().getNumOutputsQueued();
                 changed = true;
             }
             if (sent != comp.getPayloadsSent()) {
