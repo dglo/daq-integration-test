@@ -14,7 +14,9 @@ class TriggerMonitor
     private String prefix;
 
     private long received;
+    private long queuedIn;
     private long processed;
+    private long queuedOut;
     private long sent;
     private boolean stopped;
     private boolean summarized;
