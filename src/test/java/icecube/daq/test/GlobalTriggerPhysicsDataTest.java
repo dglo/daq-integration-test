@@ -296,10 +296,12 @@ public class GlobalTriggerPhysicsDataTest
 
         ActivityMonitor activity =
             new ActivityMonitor(null, null, comp, null);
-        activity.waitForStasis(5, 150, expEvents, false, false);
 
+        activity.waitForStasis(5, 150, expEvents, false, false);
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "GTStopMsg");
+
+        activity.waitForStasis(5, 150, expEvents, false, false);
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
 
         if (false) {

@@ -3,10 +3,45 @@ package icecube.daq.test;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
+import icecube.daq.trigger.algorithm.INewAlgorithm;
+import icecube.daq.trigger.common.ITriggerAlgorithm;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
+
+import java.util.HashMap;
+
+class AlgorithmData
+{
+    private int queuedIn;
+    private int queuedOut;
+
+    int getQueuedIn()
+    {
+        return queuedIn;
+    }
+
+    int getQueuedOut()
+    {
+        return queuedOut;
+    }
+
+    void setQueuedIn(int val)
+    {
+        queuedIn = val;
+    }
+
+    void setQueuedOut(int val)
+    {
+        queuedOut = val;
+    }
+
+    public String toString()
+    {
+        return String.format("%d->%d", queuedIn, queuedOut);
+    }
+}
 
 class TriggerMonitor
 {
@@ -14,8 +49,9 @@ class TriggerMonitor
     private String prefix;
 
     private long received;
-    private long queuedIn;
     private long processed;
+    private HashMap<INewAlgorithm, AlgorithmData> algoData =
+        new HashMap<INewAlgorithm, AlgorithmData>();;
     private long queuedOut;
     private long sent;
     private boolean stopped;
@@ -43,13 +79,24 @@ class TriggerMonitor
                 received = comp.getPayloadsReceived();
                 changed = true;
             }
-            if (queuedIn != comp.getTriggerManager().getNumInputsQueued()) {
-                queuedIn = comp.getTriggerManager().getNumInputsQueued();
-                changed = true;
-            }
             if (processed != comp.getTriggerManager().getTotalProcessed()) {
                 processed = comp.getTriggerManager().getTotalProcessed();
                 changed = true;
+            }
+            for (ITriggerAlgorithm oldAlgo : comp.getAlgorithms()) {
+                INewAlgorithm algo = (INewAlgorithm) oldAlgo;
+                if (!algoData.containsKey(algo)) {
+                    algoData.put(algo, new AlgorithmData());
+                }
+                AlgorithmData data = algoData.get(algo);
+                if (data.getQueuedIn() != algo.getInputQueueSize()) {
+                    data.setQueuedIn(algo.getInputQueueSize());
+                    changed = true;
+                }
+                if (data.getQueuedOut() != algo.getNumberOfCachedRequests()) {
+                    data.setQueuedOut(algo.getNumberOfCachedRequests());
+                    changed = true;
+                }
             }
             if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
                 queuedOut = comp.getTriggerManager().getNumOutputsQueued();
@@ -66,7 +113,7 @@ class TriggerMonitor
         }
 
         return changed;
-     }
+    }
 
     public long getSent()
     {
@@ -94,8 +141,16 @@ class TriggerMonitor
         }
 
         summarized = stopped;
-        return String.format(" %s %d->%d->%d", prefix, received, processed,
-                             sent);
+
+        StringBuilder buf = new StringBuilder();
+        for (INewAlgorithm algo : algoData.keySet()) {
+            if (buf.length() > 0) buf.append(' ');
+            buf.append(algo.getTriggerName()).append(' ');
+            buf.append(algoData.get(algo));
+        }
+
+        return String.format(" %s %d->%d->[%s]->%d->%d", prefix, received,
+                             processed, buf.toString(), queuedOut, sent);
     }
 }
 
@@ -173,7 +228,7 @@ class EventBuilderMonitor
         return changed;
     }
 
-    public void dumpBackEndStats()
+    public void dumpStats()
     {
         icecube.daq.eventBuilder.backend.EventBuilderBackEnd be =
             comp.getBackEnd();
@@ -298,7 +353,7 @@ public class ActivityMonitor
 
     public void dumpBackEndStats()
     {
-        ebMon.dumpBackEndStats();
+        ebMon.dumpStats();
     }
 
     private void dumpProgress(int rep, int expEvents, boolean dumpSplicers)
