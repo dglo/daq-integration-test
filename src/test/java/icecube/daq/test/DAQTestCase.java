@@ -24,6 +24,7 @@ import icecube.daq.trigger.component.TriggerComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.IDOMRegistry;
+import icecube.daq.util.Leapseconds;
 
 import java.io.File;
 import java.io.IOException;
@@ -453,6 +454,8 @@ public abstract class DAQTestCase
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-icecube-amanda-008");
+
+        Leapseconds.setConfigDirectory(cfgFile.getParentFile());
 
         IDOMRegistry domRegistry;
         try {
