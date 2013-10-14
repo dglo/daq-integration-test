@@ -86,9 +86,9 @@ public class MockDispatcher
 
         ByteBuffer buf;
         if (bufMgr == null) {
-            buf = ByteBuffer.allocate(pay.getPayloadLength());
+            buf = ByteBuffer.allocate(pay.length());
         } else {
-            buf = bufMgr.acquireBuffer(pay.getPayloadLength());
+            buf = bufMgr.acquireBuffer(pay.length());
         }
 
         try {

@@ -486,8 +486,8 @@ public class GlobalTriggerPhysicsDataTest
                     break;
                 }
 
-                if (buf == null || buf.capacity() < pay.getPayloadLength()) {
-                    buf = ByteBuffer.allocate(pay.getPayloadLength());
+                if (buf == null || buf.capacity() < pay.length()) {
+                    buf = ByteBuffer.allocate(pay.length());
                 }
 
                 buf.clear();

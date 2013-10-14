@@ -35,7 +35,7 @@ public abstract class BaseValidator
 
     static void dumpPayloadBytes(IWriteablePayload payload)
     {
-        ByteBuffer buf = ByteBuffer.allocate(payload.getPayloadLength());
+        ByteBuffer buf = ByteBuffer.allocate(payload.length());
 
         int len;
         try {
