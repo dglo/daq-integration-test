@@ -231,6 +231,7 @@ public class GlobalTriggerPhysicsDataTest
         GlobalTriggerComponent comp = new GlobalTriggerComponent();
         comp.setAlerter(new MockAlerter());
         comp.setGlobalConfigurationDir(cfgFile.getParent());
+        comp.setFirstGoodTime(1);
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
