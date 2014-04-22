@@ -22,7 +22,6 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -66,7 +65,6 @@ public class DAQInTheBoxTest
                                            long lastTime, int trigType,
                                            int cfgId, int srcId, int rrUID,
                                            int rrSrcId)
-        throws DataFormatException, IOException
     {
         final int bufLen = 104;
 
@@ -99,7 +97,6 @@ public class DAQInTheBoxTest
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
-        throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
             new ArrayList<HitData>();
@@ -634,7 +631,6 @@ public class DAQInTheBoxTest
     }
 
     void initialize(IDOMRegistry domRegistry)
-        throws DataFormatException, IOException
     {
         hitList = getInIceHits(domRegistry);
 
@@ -642,7 +638,6 @@ public class DAQInTheBoxTest
     }
 
     void sendData(StringHubComponent[] shComps)
-        throws DataFormatException, IOException
     {
         for (HitData hd : hitList) {
             ByteBuffer rawBuf = ByteBuffer.allocate(HitData.RAW_LENGTH);

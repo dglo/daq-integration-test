@@ -10,6 +10,7 @@ import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.VitreousBufferCache;
@@ -36,7 +37,6 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -170,7 +170,7 @@ public abstract class DAQTestCase
     abstract int getNumberOfExpectedEvents();
 
     abstract void initialize(IDOMRegistry domRegistry)
-        throws DataFormatException, IOException;
+        throws IOException, PayloadFormatException;
 
     void monitorEventBuilder(EBComponent comp, int maxTries)
     {
@@ -371,7 +371,7 @@ public abstract class DAQTestCase
     }
 
     abstract void sendData(StringHubComponent[] shComps)
-        throws DataFormatException, IOException;
+        throws IOException, PayloadFormatException;
 
     void setLogLevel(Level level)
     {
@@ -442,7 +442,7 @@ public abstract class DAQTestCase
     }
 
     public void testEndToEnd()
-        throws DAQCompException, DataFormatException, IOException,
+        throws DAQCompException, IOException, PayloadFormatException,
                SplicerException, TriggerException
     {
         final boolean dumpActivity = false;

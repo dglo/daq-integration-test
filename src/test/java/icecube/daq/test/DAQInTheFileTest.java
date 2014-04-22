@@ -25,7 +25,6 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -196,7 +195,6 @@ public class DAQInTheFileTest
     }
 
     void sendData(StringHubComponent[] shComps)
-        throws DataFormatException, IOException
     {
         for (int i = 0; i < shInput.length; i++) {
             shInput[i].start();

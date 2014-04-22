@@ -13,6 +13,7 @@ import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
+import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -86,7 +86,6 @@ public class EBReadonlyTest
 
     private static ByteBuffer buildHit(long time, int recType, int cfgId,
                                        int srcId, long domId, int mode)
-        throws DataFormatException, IOException
     {
         final int bufLen = 38;
 
@@ -126,7 +125,6 @@ public class EBReadonlyTest
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
-        throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
             new ArrayList<HitData>();
@@ -790,7 +788,7 @@ public class EBReadonlyTest
     }
 
     public void testEndToEnd()
-        throws DAQCompException, DataFormatException, IOException,
+        throws DAQCompException, IOException, PayloadFormatException,
                SplicerException, TriggerException
     {
         final boolean dumpActivity = false;

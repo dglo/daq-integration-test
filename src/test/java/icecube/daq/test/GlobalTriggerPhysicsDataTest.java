@@ -5,7 +5,7 @@ import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
-import icecube.daq.oldpayload.TriggerRegistry;
+import icecube.daq.payload.TriggerRegistry;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.ITriggerRequestPayload;

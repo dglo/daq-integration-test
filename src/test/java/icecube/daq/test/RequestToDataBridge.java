@@ -3,13 +3,14 @@ package icecube.daq.test;
 import icecube.daq.common.EventVersion;
 import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
-import icecube.daq.oldpayload.impl.MasterPayloadFactory;
+import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.PayloadRegistry;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class RequestToDataBridge
     private int numSent;
     private int numDone;
 
-    private MasterPayloadFactory factory;
+    private PayloadFactory factory;
 
     private RequestToDataBridge(ISourceID srcId, ReadableByteChannel reqIn,
                           WritableByteChannel dataOut, List<HitData> hitList)
@@ -329,17 +330,17 @@ public class RequestToDataBridge
             sendStop();
         } else {
             if (factory == null) {
-                factory = new MasterPayloadFactory();
+                factory = new PayloadFactory(null);
             }
 
             IWriteablePayload payload;
             try {
-                payload = factory.createPayload(0, buf, false);
+                payload = factory.getPayload(buf, 0);
                 if (payload == null) {
                     LOG.error("Couldn't create payload from " + buf.limit() +
                               "-byte buffer");
                 }
-            } catch (Exception ex) {
+            } catch (PayloadException ex) {
                 LOG.error("Couldn't validate byte buffer", ex);
                 payload = null;
             }

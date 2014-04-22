@@ -13,6 +13,7 @@ import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
+import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
@@ -39,7 +40,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -123,7 +123,6 @@ public class WorldTest
 
     private static ByteBuffer buildHit(long time, int recType, int cfgId,
                                        int srcId, long domId, int mode)
-        throws DataFormatException, IOException
     {
         final int bufLen = 38;
 
@@ -148,7 +147,6 @@ public class WorldTest
                                            long lastTime, int trigType,
                                            int cfgId, int srcId, int rrUID,
                                            int rrSrcId)
-        throws DataFormatException, IOException
     {
         final int bufLen = 104;
 
@@ -201,7 +199,6 @@ public class WorldTest
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry,
                                                    int numEvents)
-        throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
             new ArrayList<HitData>();
@@ -318,7 +315,7 @@ public class WorldTest
     }
 
     public void testEndToEnd()
-        throws DAQCompException, DataFormatException, IOException,
+        throws DAQCompException, IOException, PayloadFormatException,
                SplicerException, TriggerException
     {
         final boolean dumpActivity = false;
@@ -435,7 +432,7 @@ public class WorldTest
     }
 
     public void testSwitchRun()
-        throws DAQCompException, DataFormatException, IOException,
+        throws DAQCompException, IOException, PayloadFormatException,
                SplicerException, TriggerException
     {
         final boolean dumpActivity = false;
