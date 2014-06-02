@@ -2,6 +2,7 @@ package icecube.daq.test;
 
 import icecube.daq.juggler.alert.AlertException;
 import icecube.daq.juggler.alert.Alerter;
+import icecube.daq.payload.IUTCTime;
 import java.util.Calendar;
 import java.util.Map;
 
@@ -52,6 +53,13 @@ public class MockAlerter
      */
     public void send(String varname, Alerter.Priority priority,
                      Calendar dateTime, Map<String, Object> vars)
+        throws AlertException
+    {
+        throw new Error("Unimplemented");
+    }
+
+    public void send(String varname, Priority prio, IUTCTime utcTime,
+                     Map<String, Object> values)
         throws AlertException
     {
         throw new Error("Unimplemented");
@@ -118,6 +126,13 @@ public class MockAlerter
     public void sendAlert(Calendar dateTime, Alerter.Priority priority,
                           String condition, String notify,
                           Map<String, Object> vars)
+        throws AlertException
+    {
+        throw new Error("Unimplemented");
+    }
+
+    public void sendAlert(IUTCTime utcTime, Priority prio, String condition,
+                          String notify, Map<String, Object> vars)
         throws AlertException
     {
         throw new Error("Unimplemented");
