@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import com.google.gson.Gson;
 import icecube.daq.juggler.alert.AlertException;
 import icecube.daq.juggler.alert.Alerter;
 import icecube.daq.payload.IUTCTime;
@@ -76,7 +77,10 @@ public class MockAlerter
                      Map<String, Object> vars)
         throws AlertException
     {
-        System.out.format("Sent %s prio %s\n", varname, priority);
+        Gson gson = new Gson();
+
+        System.out.format("Sent %s prio %s vars %s\n", varname, priority,
+                          gson.toJson(vars));
     }
 
     /**
