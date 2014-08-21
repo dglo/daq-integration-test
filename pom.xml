@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>daq-integration-test</artifactId>
   <packaging>jar</packaging>
-  <name>daq-integration-test</name>
+  <name>DAQ integration tests</name>
   <description>Integration tests for the Surface Data Acquisition system for the IceCube Project.</description>
 
   <scm>
