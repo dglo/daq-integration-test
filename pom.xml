@@ -45,6 +45,11 @@
 
     <dependency>
       <groupId>edu.wisc.icecube</groupId>
+      <artifactId>trigger-common</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>edu.wisc.icecube</groupId>
       <artifactId>trigger</artifactId>
     </dependency>
 
