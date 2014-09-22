@@ -45,7 +45,7 @@ public abstract class BaseValidator
             len = -1;
         }
 
-        StringBuffer strbuf = new StringBuffer();
+        StringBuilder strbuf = new StringBuilder();
         for (int i = 0; i < buf.limit(); i++) {
             String str = Integer.toHexString(buf.get(i));
             if (str.length() < 2) {

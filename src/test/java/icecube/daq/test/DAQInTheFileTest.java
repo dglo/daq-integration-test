@@ -117,7 +117,7 @@ public class DAQInTheFileTest
 
         int numTries = 0;
 
-        StringBuffer rptBuf = new StringBuffer();
+        StringBuilder rptBuf = new StringBuilder();
 
         boolean isRunning = true;
         while (isRunning && numTries < maxTries) {
