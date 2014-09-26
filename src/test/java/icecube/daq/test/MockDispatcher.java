@@ -7,6 +7,7 @@ import icecube.daq.payload.IEventPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -124,6 +125,11 @@ public class MockDispatcher
     public IByteBufferCache getByteBufferCache()
     {
         return bufMgr;
+    }
+
+    public File getDispatchDestStorage()
+    {
+        throw new Error("Unimplemented");
     }
 
     public long getDiskAvailable()
