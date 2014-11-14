@@ -79,8 +79,8 @@ public class MockAlerter
     {
         Gson gson = new Gson();
 
-        System.out.format("Sent %s prio %s vars %s\n", varname, priority,
-                          gson.toJson(vars));
+        String s = gson.toJson(vars);
+        //System.out.format("Sent %s prio %s vars %s\n", varname, priority, s);
     }
 
     /**
