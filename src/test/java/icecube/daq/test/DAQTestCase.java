@@ -505,7 +505,6 @@ public abstract class DAQTestCase
 
         ebComp.setDispatcher(disp);
         ebComp.start(false);
-        ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
@@ -568,7 +567,8 @@ public abstract class DAQTestCase
         pipeList =
             connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, shComps);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, shComps,
+                                     RUN_NUMBER);
 
         // start sending input data
         sendData(shComps);

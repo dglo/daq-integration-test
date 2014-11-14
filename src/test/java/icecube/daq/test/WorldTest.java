@@ -344,7 +344,6 @@ public class WorldTest
         // set up event builder
         ebComp = new EBComponent(true);
         ebComp.start(false);
-        ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
@@ -360,7 +359,6 @@ public class WorldTest
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
-        gtComp.setRunNumber(RUN_NUMBER);
         gtComp.setAlerter(new MockAlerter());
 
         gtComp.configuring(cfgFile.getName());
@@ -375,7 +373,6 @@ public class WorldTest
         iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
-        iiComp.setRunNumber(RUN_NUMBER);
         iiComp.setAlerter(new MockAlerter());
 
         iiComp.configuring(cfgFile.getName());
@@ -389,7 +386,8 @@ public class WorldTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
+                                     RUN_NUMBER);
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, gtComp, ebComp);
@@ -461,7 +459,6 @@ public class WorldTest
         // set up event builder
         ebComp = new EBComponent(true);
         ebComp.start(false);
-        ebComp.setRunNumber(RUN_NUMBER);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
@@ -477,7 +474,6 @@ public class WorldTest
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
         gtComp.start(false);
-        gtComp.setRunNumber(RUN_NUMBER);
         gtComp.setAlerter(new MockAlerter());
 
         gtComp.configuring(cfgFile.getName());
@@ -492,7 +488,6 @@ public class WorldTest
         iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
         iiComp.start(false);
-        iiComp.setRunNumber(RUN_NUMBER);
         iiComp.setAlerter(new MockAlerter());
 
         iiComp.configuring(cfgFile.getName());
@@ -506,7 +501,8 @@ public class WorldTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null);
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
+                                     RUN_NUMBER);
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, gtComp, ebComp);

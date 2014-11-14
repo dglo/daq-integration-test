@@ -306,7 +306,6 @@ public class EventBuilderEndToEndTest
         // set up event builder
         EBComponent comp = new EBComponent(true);
         comp.start(false);
-        comp.setRunNumber(RUN_NUMBER);
         comp.setGlobalConfigurationDir(cfgFile.getParent());
 
         IByteBufferCache evtDataCache =
@@ -321,7 +320,7 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startComponentIO(comp, null, null, null, null);
+        DAQTestUtil.startComponentIO(comp, null, null, null, null, RUN_NUMBER);
 
         sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP, NUM_TRIGGERS);
 
@@ -368,7 +367,6 @@ public class EventBuilderEndToEndTest
 
         EBComponent comp = new EBComponent(true);
         comp.start(false);
-        comp.setRunNumber(RUN_NUMBER);
         comp.setGlobalConfigurationDir(cfgFile.getParent());
 
         IByteBufferCache evtDataCache =
@@ -383,7 +381,8 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startComponentIO(comp, null, null, null, null);
+        DAQTestUtil.startComponentIO(comp, null, null, null, null,
+                                     RUN_NUMBER);
 
         long curTime = sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP,
                                           NUM_TRIGGERS / 2);

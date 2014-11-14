@@ -174,7 +174,6 @@ public class InIceTriggerEndToEndTest
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
-        comp.setRunNumber(12345);
 
         tails = DAQTestUtil.connectToReader(comp.getReader(),
                                             comp.getInputCache(), numTails);
@@ -183,7 +182,9 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, null, null, comp, null);
+        final int runNum = 12345;
+
+        DAQTestUtil.startComponentIO(null, null, null, comp, null, runNum);
 
         ActivityMonitor activity =
             new ActivityMonitor(comp, null, null, null);

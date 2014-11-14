@@ -236,8 +236,6 @@ public class GlobalTriggerPhysicsDataTest
 
         comp.configuring(cfgFile.getName());
 
-        comp.setRunNumber(12345);
-
         tails = DAQTestUtil.connectToReader(comp.getReader(),
                                             comp.getInputCache(), numTails);
 
@@ -246,7 +244,9 @@ public class GlobalTriggerPhysicsDataTest
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, comp, null, null, null);
+        final int runNum = 12345;
+
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, runNum);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 
