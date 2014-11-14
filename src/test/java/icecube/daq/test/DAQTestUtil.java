@@ -338,41 +338,6 @@ public final class DAQTestUtil
                                        IByteBufferCache cache)
         throws IOException
     {
-        return connectToReader(rdr, cache, true);
-    }
-
-    public static Pipe[] connectToReader(PayloadReader rdr,
-                                         IByteBufferCache cache,
-                                         int numTails)
-        throws IOException
-    {
-        return connectToReader(rdr, cache, numTails, true);
-    }
-
-    public static Pipe[] connectToReader(PayloadReader rdr,
-                                         IByteBufferCache cache,
-                                         int numTails,
-                                         boolean startReader)
-        throws IOException
-    {
-        Pipe[] chanList = new Pipe[numTails];
-
-        for (int i = 0; i < chanList.length; i++) {
-            chanList[i] = connectToReader(rdr, cache, false);
-        }
-
-        if (startReader) {
-            startIOProcess(rdr);
-        }
-
-        return chanList;
-    }
-
-    public static Pipe connectToReader(PayloadReader rdr,
-                                       IByteBufferCache cache,
-                                       boolean startReader)
-        throws IOException
-    {
         Pipe testPipe = Pipe.open();
 
         WritableByteChannel sinkChannel = testPipe.sink();
@@ -385,11 +350,21 @@ public final class DAQTestUtil
 
         rdr.addDataChannel(sourceChannel, "rdrSink", cache, 1024);
 
-        if (startReader) {
-            startIOProcess(rdr);
+        return testPipe;
+    }
+
+    public static Pipe[] connectToReader(PayloadReader rdr,
+                                         IByteBufferCache cache,
+                                         int numTails)
+        throws IOException
+    {
+        Pipe[] chanList = new Pipe[numTails];
+
+        for (int i = 0; i < chanList.length; i++) {
+            chanList[i] = connectToReader(rdr, cache);
         }
 
-        return testPipe;
+        return chanList;
     }
 
     public static void destroyComponentIO(EBComponent ebComp,

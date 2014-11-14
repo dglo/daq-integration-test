@@ -126,7 +126,7 @@ public abstract class DAQTestCase
                      SourceIdRegistry.isIcetopHubSourceID(srcId)))
                 {
                     Pipe pipe =
-                        DAQTestUtil.connectToReader(hitRdr, cache, false);
+                        DAQTestUtil.connectToReader(hitRdr, cache);
                     ((SelectableChannel) pipe.sink()).configureBlocking(false);
 
                     DAQComponentOutputProcess outProc =
@@ -143,7 +143,7 @@ public abstract class DAQTestCase
         for (int i = 0; i < shComps.length; i++) {
             PayloadReader rdr = shComps[i].getRequestReader();
             Pipe pipe =
-                DAQTestUtil.connectToReader(rdr, shComps[i].getCache(), false);
+                DAQTestUtil.connectToReader(rdr, shComps[i].getCache());
             ((SelectableChannel) pipe.sink()).configureBlocking(false);
 
             dest.addDataChannel(pipe.sink(),
