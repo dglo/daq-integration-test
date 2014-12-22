@@ -109,17 +109,23 @@ public class GlobalTriggerPhysicsDataTest
                 continue;
             }
 
-            if (!(payload instanceof IEventPayload)) {
+            if (payload instanceof IEventPayload) {
+                IEventPayload event = (IEventPayload) payload;
+                numEvents++;
+
+                extractTrigger(event.getTriggerRequestPayload());
+            } else if (payload instanceof ITriggerRequestPayload) {
+                ITriggerRequestPayload trig = (ITriggerRequestPayload) payload;
+                numEvents++;
+
+                extractTrigger(trig);
+            } else {
                 System.err.println("Ignoring non-event payload " +
                                    payload.getClass().getName() +
                                    " from " + dataPath);
                 continue;
             }
 
-            IEventPayload event = (IEventPayload) payload;
-            numEvents++;
-
-            extractTrigger(event.getTriggerRequestPayload());
         }
 
         return numEvents;
@@ -205,7 +211,6 @@ public class GlobalTriggerPhysicsDataTest
     public void testRealFile()
         throws DAQCompException, IOException
     {
-
         if (streams.size() == 0) {
             URL dataURL = getClass().getResource("/global_trigger.physics.dat");
             if (dataURL == null) {
@@ -225,7 +230,7 @@ public class GlobalTriggerPhysicsDataTest
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-015");
+                                        "sps-2013-no-physminbias-001");
 
         // set up global trigger
         GlobalTriggerComponent comp = new GlobalTriggerComponent();
@@ -288,11 +293,12 @@ public class GlobalTriggerPhysicsDataTest
         }
 
         int expEvents;
-        if (numEventsInFile != 2494) {
-            expEvents = numEventsInFile;
-        } else {
-            // hack for file with bogus events (the 1% out-of-order bug)
+        if (numEventsInFile == 2494) {
             expEvents = 2483;
+        } else if (numEventsInFile == 2455) {
+            expEvents = 2370;
+        } else {
+            expEvents = numEventsInFile;
         }
 
         ActivityMonitor activity =

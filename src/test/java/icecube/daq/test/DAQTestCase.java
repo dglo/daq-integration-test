@@ -453,7 +453,7 @@ public abstract class DAQTestCase
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
 
         Leapseconds.setConfigDirectory(cfgFile.getParentFile());
 

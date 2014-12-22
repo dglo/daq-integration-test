@@ -325,7 +325,7 @@ public class WorldTest
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
 
         IDOMRegistry domRegistry;
         try {
@@ -440,7 +440,7 @@ public class WorldTest
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
 
         IDOMRegistry domRegistry;
         try {

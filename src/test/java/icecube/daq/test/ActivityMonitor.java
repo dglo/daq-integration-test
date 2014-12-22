@@ -73,6 +73,11 @@ class TriggerMonitor
                               (!comp.getReader().isRunning() &&
                                comp.getWriter().isStopped()));
 
+        if (comp != null && comp.getAlgorithms() == null) {
+            throw new Error("No algorithms available from " +
+                            comp.getClass().getName());
+        }
+
         boolean changed = false;
         if (comp != null && !summarized) {
             if (received != comp.getPayloadsReceived()) {

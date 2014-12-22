@@ -105,7 +105,7 @@ public class InIceTriggerEndToEndTest
         }
     }
 
-    private void sendInIceData(Pipe[] tails, int numObjs)
+    private void sendInIceData(Pipe[] tails, int numObjs, long[] domIds)
         throws IOException
     {
         for (int i = 0; i < numObjs; i++) {
@@ -118,7 +118,8 @@ public class InIceTriggerEndToEndTest
             }
 
             final int tailIndex = i % tails.length;
-            sendHit(tails[tailIndex].sink(), time, tailIndex, 987654321L * i);
+            final long domId = domIds[i % domIds.length];
+            sendHit(tails[tailIndex].sink(), time, tailIndex, domId);
         }
     }
 
@@ -154,7 +155,8 @@ public class InIceTriggerEndToEndTest
     }
 
     public void testEndToEnd()
-        throws DAQCompException, IOException, SplicerException, TriggerException
+        throws DAQCompException, IOException, SplicerException,
+               TriggerException
     {
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
@@ -163,9 +165,14 @@ public class InIceTriggerEndToEndTest
         final int numTails = 10;
         final int numObjs = numTails * 10;
 
+        final long[] domIds = new long[] {
+            0xe44c73438cb0L, 0x82d1330538caL, 0x1b955f41b088L, 0x1ae4a83e1372L,
+            0x011d29bbcdb2L, 0x3f95dd50fb33L, 0x4212834c6c88L,
+        };
+
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
 
         // set up in-ice trigger
         comp = new IniceTriggerComponent();
@@ -190,7 +197,7 @@ public class InIceTriggerEndToEndTest
             new ActivityMonitor(comp, null, null, null);
 
         // load data into input channels
-        sendInIceData(tails, numObjs);
+        sendInIceData(tails, numObjs, domIds);
 
         final int expTriggers = numObjs / NUM_HITS_PER_TRIGGER;
 
