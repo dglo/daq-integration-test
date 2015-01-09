@@ -1,9 +1,11 @@
 package icecube.daq.test;
 
 import com.google.gson.Gson;
+
 import icecube.daq.juggler.alert.AlertException;
 import icecube.daq.juggler.alert.Alerter;
 import icecube.daq.payload.IUTCTime;
+
 import java.util.Calendar;
 import java.util.Map;
 
@@ -31,7 +33,7 @@ public class MockAlerter
      */
     public String getService()
     {
-        throw new Error("Unimplemented");
+        return DEFAULT_SERVICE;
     }
 
     /**
@@ -45,104 +47,6 @@ public class MockAlerter
     }
 
     /**
-     * Send a message to IceCube Live.
-     *
-     * @param varname variable name
-     * @param priority priority level
-     * @param dateTime date and time for message
-     * @param values map of names to values
-     */
-    public void send(String varname, Alerter.Priority priority,
-                     Calendar dateTime, Map<String, Object> vars)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void send(String varname, Priority prio, IUTCTime utcTime,
-                     Map<String, Object> values)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    /**
-     * Send a message to IceCube Live.
-     *
-     * @param varname variable name
-     * @param priority priority level
-     * @param values map of names to values
-     */
-    public void send(String varname, Alerter.Priority priority,
-                     Map<String, Object> vars)
-        throws AlertException
-    {
-        Gson gson = new Gson();
-
-        String s = gson.toJson(vars);
-        //System.out.format("Sent %s prio %s vars %s\n", varname, priority, s);
-    }
-
-    /**
-     * Send an alert.
-     *
-     * @param priority priority level
-     * @param condition I3Live condition
-     * @param vars map of variable names to values
-     *
-     * @throws AlertException if there is a problem with one of the parameters
-     */
-    public void sendAlert(Alerter.Priority priority, String condition,
-                          Map<String, Object> vars)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    /**
-     * Send an alert.
-     *
-     * @param priority priority level
-     * @param condition I3Live condition
-     * @param notify list of email addresses which receive notification
-     * @param vars map of variable names to values
-     *
-     * @throws AlertException if there is a problem with one of the parameters
-     */
-    public void sendAlert(Alerter.Priority priority, String condition,
-                          String notify, Map<String, Object> vars)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    /**
-     * Send an alert.
-     *
-     * @param dateTime date and time for message
-     * @param priority priority level
-     * @param condition I3Live condition
-     * @param notify list of email addresses which receive notification
-     * @param vars map of variable names to values
-     *
-     * @throws AlertException if there is a problem with one of the parameters
-     */
-    public void sendAlert(Calendar dateTime, Alerter.Priority priority,
-                          String condition, String notify,
-                          Map<String, Object> vars)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void sendAlert(IUTCTime utcTime, Priority prio, String condition,
-                          String notify, Map<String, Object> vars)
-        throws AlertException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    /**
      * Send a Java object (as a JSON string) to a 0MQ server.
      *
      * @param obj object to send
@@ -150,7 +54,8 @@ public class MockAlerter
     public void sendObject(Object obj)
         throws AlertException
     {
-        throw new Error("Unimplemented");
+        Gson gson = new Gson();
+        gson.toJson(obj);
     }
 
     /**
