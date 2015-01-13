@@ -123,16 +123,11 @@ public class EventBuilderEndToEndTest
         HitData.setDefaultTriggerMode(0);
         HitData.setDOMRegistry(domRegistry);
 
-        Set<String> domSet = domRegistry.keys();
-        long[] domIdList = new long[domSet.size()];
+        long[] domIdList = new long[domRegistry.size()];
 
         int nextIdx = 0;
-        for (String mbStr : domSet) {
-            try {
-                domIdList[nextIdx++] = Long.parseLong(mbStr, 16);
-            } catch (NumberFormatException nfe) {
-                throw new Error("Bad mainboard ID \"" + mbStr + "\"");
-            }
+        for (Long mbId : domRegistry.keys()) {
+            domIdList[nextIdx++] = mbId.longValue();
         }
 
         long time = TIME_BASE;
