@@ -187,6 +187,11 @@ public class MockAppender
         return eventList.size();
     }
 
+    public String[] getThrowableStrRep(int idx)
+    {
+        return getEvent(idx).getThrowableStrRep();
+    }
+
     /**
      * Is this appender sending log messages?
      *

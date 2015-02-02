@@ -754,8 +754,21 @@ public class EBReadonlyTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        int failed = 0;
+        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+            String msg = (String) appender.getMessage(i);
+            if (!msg.startsWith("Could not add data ")) {
+                System.err.println("XXX " + msg);
+                String[] thr = appender.getThrowableStrRep(i);
+                if (thr != null) {
+                    for (int m = 0; m < thr.length; m++) {
+                        System.err.println("--- " + thr[m]);
+                    }
+                }
+                failed++;
+            }
+        }
+        assertEquals("Found unknown log messages", 0, failed);
 
         if (ebComp != null) ebComp.closeAll();
         if (gtComp != null) gtComp.closeAll();
