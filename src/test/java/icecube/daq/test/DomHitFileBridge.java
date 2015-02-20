@@ -67,16 +67,7 @@ public class DomHitFileBridge
 
     long getNumSent()
     {
-        long[] recSent = hitOut.getRecordsSent();
-
-        long total = 0L;
-        if (recSent != null) {
-            for (int i = 0; i < recSent.length; i++) {
-                total += recSent[i];
-            }
-        }
-
-        return (int) total;
+        return hitOut.getRecordsSent();
     }
 
     void write(ByteBuffer buf)

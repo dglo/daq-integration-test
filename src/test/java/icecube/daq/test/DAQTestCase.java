@@ -258,15 +258,7 @@ public abstract class DAQTestCase
 
             boolean stagnant = true;
             if (checkHits) {
-                long[] recSent = hitOut.getRecordsSent();
-
-                long numHits = 0L;
-                if (recSent != null) {
-                    for (int i = 0; i < recSent.length; i++) {
-                        numHits += recSent[i];
-                    }
-                }
-
+                long numHits = hitOut.getRecordsSent();
                 if (numHits > prevHits) {
                     prevHits = numHits;
                     stagnant = false;
@@ -277,14 +269,7 @@ public abstract class DAQTestCase
                 final long numQueued = sender.getNumHitsQueued() +
                     sender.getNumReadoutRequestsQueued();
 
-                long[] recSent = dataOut.getRecordsSent();
-
-                long numSent = 0L;
-                if (recSent != null) {
-                    for (int i = 0; i < recSent.length; i++) {
-                        numSent += recSent[i];
-                    }
-                }
+                long numSent = dataOut.getRecordsSent();
 
                 if (isRunning && numRcvd > prevRcvd) {
                     prevRcvd = numRcvd;
