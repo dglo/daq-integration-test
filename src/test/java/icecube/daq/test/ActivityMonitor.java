@@ -10,12 +10,15 @@ import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 class AlgorithmData
 {
     private int queuedIn;
     private int queuedOut;
+    private long sent;
 
     int getQueuedIn()
     {
@@ -25,6 +28,11 @@ class AlgorithmData
     int getQueuedOut()
     {
         return queuedOut;
+    }
+
+    long getSent()
+    {
+        return sent;
     }
 
     void setQueuedIn(int val)
@@ -37,9 +45,14 @@ class AlgorithmData
         queuedOut = val;
     }
 
+    void setSent(long val)
+    {
+        sent = val;
+    }
+
     public String toString()
     {
-        return String.format("%d->%d", queuedIn, queuedOut);
+        return String.format("%d->%d->%d", queuedIn, queuedOut, sent);
     }
 }
 
@@ -51,7 +64,8 @@ class TriggerMonitor
     private long received;
     private long processed;
     private HashMap<INewAlgorithm, AlgorithmData> algoData =
-        new HashMap<INewAlgorithm, AlgorithmData>();;
+        new HashMap<INewAlgorithm, AlgorithmData>();
+    private INewAlgorithm[] algoKeys;
     private long queuedOut;
     private long sent;
     private boolean stopped;
@@ -88,10 +102,12 @@ class TriggerMonitor
                 processed = comp.getTriggerManager().getTotalProcessed();
                 changed = true;
             }
+            boolean added = false;
             for (ITriggerAlgorithm oldAlgo : comp.getAlgorithms()) {
                 INewAlgorithm algo = (INewAlgorithm) oldAlgo;
                 if (!algoData.containsKey(algo)) {
                     algoData.put(algo, new AlgorithmData());
+                    added = true;
                 }
                 AlgorithmData data = algoData.get(algo);
                 if (data.getQueuedIn() != algo.getInputQueueSize()) {
@@ -101,6 +117,18 @@ class TriggerMonitor
                 if (data.getQueuedOut() != algo.getNumberOfCachedRequests()) {
                     data.setQueuedOut(algo.getNumberOfCachedRequests());
                     changed = true;
+                }
+                if (data.getSent() != algo.getSentTriggerCount()) {
+                    data.setSent(algo.getSentTriggerCount());
+                    changed = true;
+                }
+            }
+            if (added) {
+                Object[] tmpKeys = algoData.keySet().toArray();
+                Arrays.sort(tmpKeys);
+                algoKeys = new INewAlgorithm[tmpKeys.length];
+                for (int i = 0; i < tmpKeys.length; i++) {
+                    algoKeys[i] = (INewAlgorithm) tmpKeys[i];
                 }
             }
             if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
@@ -148,10 +176,13 @@ class TriggerMonitor
         summarized = stopped;
 
         StringBuilder buf = new StringBuilder();
-        for (INewAlgorithm algo : algoData.keySet()) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append(algo.getTriggerName()).append(' ');
-            buf.append(algoData.get(algo));
+
+        if (algoKeys != null) {
+            for (INewAlgorithm algo : algoKeys) {
+                if (buf.length() > 0) buf.append(' ');
+                buf.append(algo.getTriggerName()).append(' ');
+                buf.append(algoData.get(algo));
+            }
         }
 
         return String.format(" %s %d->%d->[%s]->%d->%d", prefix, received,
