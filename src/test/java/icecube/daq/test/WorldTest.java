@@ -546,8 +546,14 @@ public class WorldTest
                      numEvents + 1, iiComp.getPayloadsSent());
         assertEquals("Missing global trigger requests",
                      numEvents + 1, gtComp.getPayloadsSent());
-        assertEquals("Missing trigger requests in eventBuilder", numEvents - 1,
-                     prevTRsRcvd + ebComp.getTriggerRequestsReceived());
+
+        final long totalTRs =
+            prevTRsRcvd + ebComp.getTriggerRequestsReceived();
+        assertTrue("Missing trigger requests in eventBuilder (got " +
+                   totalTRs + ", expected " + (numEvents - 1) + " or " +
+                   numEvents + ")",
+                   totalTRs == numEvents - 1 || totalTRs == numEvents);
+
         assertEquals("Missing events", numEvents,
                      prevEvtsSent + ebComp.getEventsSent());
 
