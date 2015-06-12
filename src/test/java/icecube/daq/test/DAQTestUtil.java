@@ -592,7 +592,8 @@ public final class DAQTestUtil
         int numReps = 0;
         while (numReps < maxReps &&
                ((proc != null && !proc.isStopped()) ||
-                (splicer != null && splicer.getState() != Splicer.STOPPED)))
+                (splicer != null &&
+                 splicer.getState() != Splicer.State.STOPPED)))
         {
             numReps++;
 
@@ -608,10 +609,9 @@ public final class DAQTestUtil
                        ", not Idle after " + action + extra, proc.isStopped());
         }
         if (splicer != null) {
-            assertTrue("Splicer in " + splicer.getStateString() +
+            assertTrue("Splicer in " + splicer.getState().name() +
                        ", not STOPPED after " + numReps + " reps of " + action +
-                       extra,
-                       splicer.getState() == Splicer.STOPPED);
+                       extra, splicer.getState() == Splicer.State.STOPPED);
         }
     }
 }
