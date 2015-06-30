@@ -57,8 +57,8 @@ public class DAQInTheFileTest
 
         int num = 0;
         for (ISourceID srcId : shMap.keySet()) {
-            shComps[num] =
-                new StringHubComponent(srcId.getSourceID(), true);
+            shComps[num] = new StringHubComponent(srcId.getSourceID());
+            shComps[num].forceRandomMode();
             shComps[num].start(false);
             shInput[num] = new DomHitFileBridge(shMap.get(srcId), shComps[num]);
             num++;

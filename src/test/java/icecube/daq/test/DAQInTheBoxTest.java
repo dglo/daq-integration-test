@@ -53,7 +53,8 @@ public class DAQInTheBoxTest
         StringHubComponent[] shComps = new StringHubComponent[idList.size()];
         int n = 0;
         for (ISourceID srcId : idList) {
-            shComps[n] = new StringHubComponent(srcId.getSourceID(), true);
+            shComps[n] = new StringHubComponent(srcId.getSourceID());
+            shComps[n].forceRandomMode();
             shComps[n].start(false);
             n++;
         }
