@@ -3,8 +3,7 @@ package icecube.daq.test;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.algorithm.INewAlgorithm;
-import icecube.daq.trigger.common.ITriggerAlgorithm;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
@@ -63,9 +62,9 @@ class TriggerMonitor
 
     private long received;
     private long processed;
-    private HashMap<INewAlgorithm, AlgorithmData> algoData =
-        new HashMap<INewAlgorithm, AlgorithmData>();
-    private INewAlgorithm[] algoKeys;
+    private HashMap<ITriggerAlgorithm, AlgorithmData> algoData =
+        new HashMap<ITriggerAlgorithm, AlgorithmData>();
+    private ITriggerAlgorithm[] algoKeys;
     private long queuedOut;
     private long sent;
     private boolean stopped;
@@ -103,8 +102,7 @@ class TriggerMonitor
                 changed = true;
             }
             boolean added = false;
-            for (ITriggerAlgorithm oldAlgo : comp.getAlgorithms()) {
-                INewAlgorithm algo = (INewAlgorithm) oldAlgo;
+            for (ITriggerAlgorithm algo : comp.getAlgorithms()) {
                 if (!algoData.containsKey(algo)) {
                     algoData.put(algo, new AlgorithmData());
                     added = true;
@@ -126,9 +124,9 @@ class TriggerMonitor
             if (added) {
                 Object[] tmpKeys = algoData.keySet().toArray();
                 Arrays.sort(tmpKeys);
-                algoKeys = new INewAlgorithm[tmpKeys.length];
+                algoKeys = new ITriggerAlgorithm[tmpKeys.length];
                 for (int i = 0; i < tmpKeys.length; i++) {
-                    algoKeys[i] = (INewAlgorithm) tmpKeys[i];
+                    algoKeys[i] = (ITriggerAlgorithm) tmpKeys[i];
                 }
             }
             if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
@@ -178,7 +176,7 @@ class TriggerMonitor
         StringBuilder buf = new StringBuilder();
 
         if (algoKeys != null) {
-            for (INewAlgorithm algo : algoKeys) {
+            for (ITriggerAlgorithm algo : algoKeys) {
                 if (buf.length() > 0) buf.append(' ');
                 buf.append(algo.getTriggerName()).append(' ');
                 buf.append(algoData.get(algo));

@@ -17,7 +17,7 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.sender.Sender;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
-import icecube.daq.trigger.common.ITriggerManager;
+import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
