@@ -86,23 +86,26 @@ class TriggerMonitor
                               (!comp.getReader().isRunning() &&
                                comp.getWriter().isStopped()));
 
-        if (comp != null && comp.getAlgorithms() == null) {
-            throw new Error("No algorithms available from " +
-                            comp.getClass().getName());
-        }
-
         boolean changed = false;
         if (comp != null && !summarized) {
             if (received != comp.getPayloadsReceived()) {
                 received = comp.getPayloadsReceived();
                 changed = true;
             }
+
             if (processed != comp.getTriggerManager().getTotalProcessed()) {
                 processed = comp.getTriggerManager().getTotalProcessed();
                 changed = true;
             }
+
+            Iterable<ITriggerAlgorithm> iter = comp.getAlgorithms();
+            if (iter == null) {
+                throw new Error("No algorithms available from " +
+                                comp.getClass().getName());
+            }
+
             boolean added = false;
-            for (ITriggerAlgorithm algo : comp.getAlgorithms()) {
+            for (ITriggerAlgorithm algo : iter) {
                 if (!algoData.containsKey(algo)) {
                     algoData.put(algo, new AlgorithmData());
                     added = true;
@@ -129,10 +132,12 @@ class TriggerMonitor
                     algoKeys[i] = (ITriggerAlgorithm) tmpKeys[i];
                 }
             }
+
             if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
                 queuedOut = comp.getTriggerManager().getNumOutputsQueued();
                 changed = true;
             }
+
             if (sent != comp.getPayloadsSent()) {
                 sent = comp.getPayloadsSent();
                 changed = true;
