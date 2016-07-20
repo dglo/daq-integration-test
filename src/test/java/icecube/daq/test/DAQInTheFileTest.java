@@ -12,7 +12,6 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
