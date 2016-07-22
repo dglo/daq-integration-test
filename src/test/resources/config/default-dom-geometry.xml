@@ -54644,27 +54644,6 @@
     </dom>
   </string>
   <string>
-    <number>1000</number>
-    <dom>
-      <position>65</position>
-      <mainBoardId>53494d550065</mainBoardId>
-      <name>AMANDA_SYNC_DOM_SIM</name>
-      <productionId>AMASync1_SIM</productionId>
-      <xCoordinate>0.0</xCoordinate>
-      <yCoordinate>0.0</yCoordinate>
-      <zCoordinate>0.0</zCoordinate>
-    </dom>
-    <dom>
-      <position>66</position>
-      <mainBoardId>53494d550066</mainBoardId>
-      <name>AMANDA_TRIG_DOM_SIM</name>
-      <productionId>AMATrig1_SIM</productionId>
-      <xCoordinate>0.0</xCoordinate>
-      <yCoordinate>0.0</yCoordinate>
-      <zCoordinate>0.0</zCoordinate>
-    </dom>
-  </string>
-  <string>
     <number>1001</number>
     <dom>
       <position>1</position>
