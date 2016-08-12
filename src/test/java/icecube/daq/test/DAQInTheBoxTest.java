@@ -53,6 +53,7 @@ public class DAQInTheBoxTest
         int n = 0;
         for (ISourceID srcId : idList) {
             shComps[n] = new StringHubComponent(srcId.getSourceID());
+            shComps[n].initialize();
             shComps[n].forceRandomMode();
             shComps[n].start(false);
             n++;

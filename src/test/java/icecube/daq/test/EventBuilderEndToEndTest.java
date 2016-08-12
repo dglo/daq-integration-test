@@ -299,14 +299,17 @@ public class EventBuilderEndToEndTest
         List<HitData> hitList = getHitList(domRegistry);
 
         // set up event builder
-        EBComponent comp = new EBComponent(true);
-        comp.start(false);
+        EBComponent comp = new EBComponent();
+        comp.setValidateEvents(true);
         comp.setGlobalConfigurationDir(cfgFile.getParent());
+        comp.initialize();
 
         IByteBufferCache evtDataCache =
             comp.getByteBufferCache(DAQConnector.TYPE_EVENT);
         MockDispatcher dispatcher = new MockDispatcher(evtDataCache);
         comp.setDispatcher(dispatcher);
+
+        comp.start(false);
 
         gtPipe = DAQTestUtil.connectToReader(comp.getTriggerReader(),
                                              comp.getTriggerCache());
@@ -360,14 +363,17 @@ public class EventBuilderEndToEndTest
 
         List<HitData> hitList = getHitList(domRegistry);
 
-        EBComponent comp = new EBComponent(true);
-        comp.start(false);
+        EBComponent comp = new EBComponent();
+        comp.setValidateEvents(true);
         comp.setGlobalConfigurationDir(cfgFile.getParent());
+        comp.initialize();
 
         IByteBufferCache evtDataCache =
             comp.getByteBufferCache(DAQConnector.TYPE_EVENT);
         MockDispatcher dispatcher = new MockDispatcher(evtDataCache);
         comp.setDispatcher(dispatcher);
+
+        comp.start(false);
 
         gtPipe = DAQTestUtil.connectToReader(comp.getTriggerReader(),
                                              comp.getTriggerCache());

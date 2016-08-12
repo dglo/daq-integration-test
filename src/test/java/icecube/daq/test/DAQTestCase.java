@@ -482,25 +482,29 @@ public abstract class DAQTestCase
         }
 
         // set up event builder
-        ebComp = new EBComponent(true);
+        ebComp = new EBComponent();
+        ebComp.setValidateEvents(true);
+        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+        ebComp.initialize();
 
         IByteBufferCache ebEvtCache =
             ebComp.getByteBufferCache(DAQConnector.TYPE_EVENT);
         MockDispatcher disp = new MockDispatcher(ebEvtCache);
 
         ebComp.setDispatcher(disp);
-        ebComp.start(false);
-        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
-        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
+        ebComp.initialize();
+        ebComp.start(false);
 
         ebComp.configuring(cfgFile.getName());
 
         // set up global trigger
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
-        gtComp.start(false);
         gtComp.setAlerter(new MockAlerter());
+        gtComp.initialize();
+        gtComp.start(false);
 
         gtComp.configuring(cfgFile.getName());
 
@@ -516,8 +520,9 @@ public abstract class DAQTestCase
         } else {
             itComp = new IcetopTriggerComponent();
             itComp.setGlobalConfigurationDir(cfgFile.getParent());
-            itComp.start(false);
             itComp.setAlerter(new MockAlerter());
+            itComp.initialize();
+            itComp.start(false);
 
             itComp.configuring(cfgFile.getName());
 
@@ -535,8 +540,9 @@ public abstract class DAQTestCase
         } else {
             iiComp = new IniceTriggerComponent();
             iiComp.setGlobalConfigurationDir(cfgFile.getParent());
-            iiComp.start(false);
             iiComp.setAlerter(new MockAlerter());
+            iiComp.initialize();
+            iiComp.start(false);
 
             iiComp.configuring(cfgFile.getName());
 

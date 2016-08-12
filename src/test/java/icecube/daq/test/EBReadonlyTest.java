@@ -821,16 +821,19 @@ public class EBReadonlyTest
         PayloadValidator validator = new TriggerValidator();
 
         // set up event builder
-        ebComp = new EBComponent(true);
-        ebComp.start(false);
+        ebComp = new EBComponent();
+        ebComp.setValidateEvents(true);
         ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
-        ebComp.setAlerter(new MockAlerter());
+        ebComp.initialize();
 
         IByteBufferCache evtDataCache =
             ebComp.getDispatcher().getByteBufferCache();
         MockDispatcher disp = new MockDispatcher(evtDataCache);
         ebComp.setDispatcher(disp);
+        ebComp.setAlerter(new MockAlerter());
+
+        ebComp.start(false);
 
         disp.setReadOnlyTrigger(numEventsBeforeReadOnly);
 
@@ -844,8 +847,9 @@ public class EBReadonlyTest
         // set up global trigger
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
-        gtComp.start(false);
         gtComp.setAlerter(new MockAlerter());
+        gtComp.initialize();
+        gtComp.start(false);
 
         gtComp.configuring(cfgFile.getName());
 
@@ -858,8 +862,9 @@ public class EBReadonlyTest
         // set up in-ice trigger
         iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
-        iiComp.start(false);
         iiComp.setAlerter(new MockAlerter());
+        iiComp.initialize();
+        iiComp.start(false);
 
         iiComp.configuring(cfgFile.getName());
 
