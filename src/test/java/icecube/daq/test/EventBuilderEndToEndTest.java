@@ -22,7 +22,9 @@ import icecube.daq.payload.impl.TriggerRequest;
 import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMRegistryException;
+import icecube.daq.util.DOMRegistryFactory;
+import icecube.daq.util.DOMInfo;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
@@ -109,6 +111,7 @@ public class EventBuilderEndToEndTest
     }
 
     private List<HitData> getHitList(IDOMRegistry domRegistry)
+        throws DOMRegistryException
     {
         final long firstTime = TIME_BASE;
         final long timeRange = TRIG_STEP * NUM_TRIGGERS;
@@ -123,11 +126,20 @@ public class EventBuilderEndToEndTest
         HitData.setDefaultTriggerMode(0);
         HitData.setDOMRegistry(domRegistry);
 
-        long[] domIdList = new long[domRegistry.size()];
+        ArrayList<DOMInfo> realDOMs = new ArrayList<DOMInfo>();
+        for (DOMInfo dom : domRegistry.allDOMs()) {
+            if (dom.isRealDOM()) {
+                if (dom.isRealDOM()) {
+                    realDOMs.add(dom);
+                }
+            }
+        }
+
+        long[] domIdList = new long[realDOMs.size()];
 
         int nextIdx = 0;
-        for (Long mbId : domRegistry.keys()) {
-            domIdList[nextIdx++] = mbId.longValue();
+        for (DOMInfo dom : realDOMs) {
+            domIdList[nextIdx++] = dom.getNumericMainboardId();
         }
 
         long time = TIME_BASE;
@@ -278,7 +290,7 @@ public class EventBuilderEndToEndTest
     }
 
     public void testEndToEnd()
-        throws  DAQCompException, IOException
+        throws  DAQCompException, DOMRegistryException, IOException
     {
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
@@ -290,7 +302,7 @@ public class EventBuilderEndToEndTest
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
@@ -344,7 +356,7 @@ public class EventBuilderEndToEndTest
     }
 
     public void testSwitchRun()
-        throws  DAQCompException, IOException
+        throws  DAQCompException, DOMRegistryException, IOException
     {
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
@@ -356,7 +368,7 @@ public class EventBuilderEndToEndTest
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }

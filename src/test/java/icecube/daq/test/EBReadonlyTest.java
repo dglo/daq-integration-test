@@ -26,7 +26,9 @@ import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.config.TriggerReadout;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMInfo;
+import icecube.daq.util.DOMRegistryException;
+import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
@@ -124,6 +126,7 @@ public class EBReadonlyTest
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry)
+        throws DOMRegistryException
     {
         ArrayList<HitData> list =
             new ArrayList<HitData>();
@@ -137,11 +140,17 @@ public class EBReadonlyTest
         if (useStatic) {
             addStaticHits(list);
         } else {
-            long[] domIdList = new long[domRegistry.size()];
+            ArrayList<DOMInfo> realDOMs = new ArrayList<DOMInfo>();
+            for (DOMInfo dom : domRegistry.allDOMs()) {
+                if (dom.isRealDOM()) {
+                    realDOMs.add(dom);
+                }
+            }
 
+            long[] domIdList = new long[realDOMs.size()];
             int nextIdx = 0;
-            for (Long mbId : domRegistry.keys()) {
-                domIdList[nextIdx++] = mbId.longValue();
+            for (DOMInfo dom : realDOMs) {
+                domIdList[nextIdx++] = dom.getNumericMainboardId();
             }
 
             addGeneratedHits(domIdList, list);
@@ -795,8 +804,8 @@ public class EBReadonlyTest
     }
 
     public void testEndToEnd()
-        throws DAQCompException, IOException, PayloadFormatException,
-               SplicerException, TriggerException
+        throws DAQCompException, DOMRegistryException, IOException,
+               PayloadFormatException, SplicerException, TriggerException
     {
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
@@ -810,7 +819,7 @@ public class EBReadonlyTest
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }

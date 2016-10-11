@@ -26,7 +26,7 @@ import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.config.TriggerReadout;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
@@ -329,7 +329,7 @@ public class WorldTest
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
@@ -449,7 +449,7 @@ public class WorldTest
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
