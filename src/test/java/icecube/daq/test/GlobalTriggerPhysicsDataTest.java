@@ -326,12 +326,17 @@ public class GlobalTriggerPhysicsDataTest
 
         DAQTestUtil.destroyComponentIO(null, comp, null, null, null);
 
-        if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
+        try {
+            if (!appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
+                for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                    final String msg = (String) appender.getMessage(i);
+                    if (!msg.startsWith("Resetting counter ")) {
+                        fail("Got unexpected log message #" + i + ": " + msg);
+                    }
+                }
+            }
+        } finally {
             appender.clear();
-        } else if (appender.getNumberOfMessages() > 0) {
-            fail(String.format("Got %d unexpected log message, first=%s",
-                               appender.getNumberOfMessages(),
-                               appender.getMessage(0)));
         }
     }
 
