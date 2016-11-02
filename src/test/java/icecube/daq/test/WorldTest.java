@@ -399,7 +399,8 @@ public class WorldTest
 
         sendHits(idList, hitList, 0, hitList.size());
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         //assertEquals("Global trigger/event mismatch",
@@ -407,7 +408,8 @@ public class WorldTest
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         int ebRunChk = 0;
@@ -415,7 +417,8 @@ public class WorldTest
             Thread.yield();
         }
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",
@@ -520,7 +523,8 @@ public class WorldTest
         final int midpoint = hitList.size() / 2;
         sendHits(idList, hitList, 0, midpoint);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         final long prevTRsRcvd = ebComp.getTriggerRequestsReceived();
@@ -533,7 +537,8 @@ public class WorldTest
 
         sendHits(idList, hitList, midpoint, hitList.size() - midpoint);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         //assertEquals("Global trigger/event mismatch",
@@ -542,14 +547,16 @@ public class WorldTest
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
 
         int ebRunChk = 0;
         while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
             Thread.yield();
         }
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",

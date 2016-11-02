@@ -566,7 +566,8 @@ public abstract class DAQTestCase
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, itComp, gtComp, ebComp);
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         int ebRunChk = 0;
@@ -574,7 +575,8 @@ public abstract class DAQTestCase
             Thread.yield();
         }
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         if (false) {

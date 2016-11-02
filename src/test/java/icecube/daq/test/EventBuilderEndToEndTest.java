@@ -335,13 +335,13 @@ public class EventBuilderEndToEndTest
         sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP, NUM_TRIGGERS);
 
         ActivityMonitor activity = new ActivityMonitor(null, null, null, comp);
-        activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
+        activity.waitForStasis(10, 1000, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         DAQTestUtil.sendStopMsg(gtPipe.sink());
 
-        activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
+        activity.waitForStasis(10, 1000, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
@@ -402,7 +402,7 @@ public class EventBuilderEndToEndTest
 
         ActivityMonitor activity =
             new ActivityMonitor(null, null, null, comp);
-        activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
+        activity.waitForStasis(10, 1000, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
@@ -410,13 +410,13 @@ public class EventBuilderEndToEndTest
 
         sendGlobalTriggers(gtPipe.sink(), curTime, TRIG_STEP, NUM_TRIGGERS / 2);
 
-        activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
+        activity.waitForStasis(10, 1000, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         DAQTestUtil.sendStopMsg(gtPipe.sink());
 
-        activity.waitForStasis(10, 100, NUM_TRIGGERS - 1, dumpActivity,
+        activity.waitForStasis(10, 1000, NUM_TRIGGERS - 1, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 

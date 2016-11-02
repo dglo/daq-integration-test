@@ -894,13 +894,13 @@ public class EBReadonlyTest
 
         sendHits(idList, hitList, 0, hitList.size());
 
-        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, dumpActivity,
+        activity.waitForStasis(10, 1000, numEventsBeforeReadOnly, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(10, 100, numEventsBeforeReadOnly, dumpActivity,
+        activity.waitForStasis(10, 1000, numEventsBeforeReadOnly, dumpActivity,
                                dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
