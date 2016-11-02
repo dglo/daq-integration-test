@@ -7,6 +7,7 @@ import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IWriteablePayload;
@@ -399,14 +400,28 @@ public abstract class DAQTestCase
         assertEquals("Bad number of log messages",
                      0, appender.getNumberOfMessages());
 
-        if (ebComp != null) ebComp.closeAll();
-        if (gtComp != null) gtComp.closeAll();
-        if (itComp != null) itComp.closeAll();
-        if (iiComp != null) iiComp.closeAll();
+        IComponent[] comps = new IComponent[] {
+            ebComp, gtComp, itComp, iiComp
+        };
+        for (IComponent comp : comps) {
+            if (comp != null) {
+                try {
+                    comp.closeAll();
+                } catch (IOException ioe) {
+                    System.err.println("While closing " + comp);
+                    ioe.printStackTrace();
+                }
+            }
+        }
 
         if (shComps != null) {
-            for (int i = 0; i < shComps.length; i++) {
-                shComps[i].closeAll();
+            for (IComponent comp : shComps) {
+                try {
+                    comp.closeAll();
+                } catch (IOException ioe) {
+                    System.err.println("While closing " + comp);
+                    ioe.printStackTrace();
+                }
             }
         }
 
