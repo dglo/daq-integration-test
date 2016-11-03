@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.SPDataAnalysis;
@@ -767,13 +768,7 @@ public class EBReadonlyTest
         for (int i = 0; i < appender.getNumberOfMessages(); i++) {
             String msg = (String) appender.getMessage(i);
             if (!msg.startsWith("Could not add data ")) {
-                System.err.println("XXX " + msg);
-                String[] thr = appender.getThrowableStrRep(i);
-                if (thr != null) {
-                    for (int m = 0; m < thr.length; m++) {
-                        System.err.println("--- " + thr[m]);
-                    }
-                }
+                appender.dumpEvent(i);
                 failed++;
             }
         }

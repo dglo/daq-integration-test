@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.SPDataAnalysis;
@@ -179,21 +180,25 @@ public class WorldTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                String msg = (String) appender.getMessage(i);
 
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.startsWith("Sending empty event for window") &&
-                !msg.startsWith("Couldn't move temp file ") &&
-                !msg.endsWith("does not exist!  Using current directory."))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+                if (!(msg.startsWith("Clearing ") &&
+                      msg.endsWith(" rope entries")) &&
+                    !msg.startsWith("Resetting counter ") &&
+                    !msg.startsWith("No match for timegate ") &&
+                    !msg.startsWith("Sending empty event for window") &&
+                    !msg.startsWith("Couldn't move temp file ") &&
+                    !msg.endsWith(" not exist!  Using current directory."))
+                {
+                    fail("Bad log message#" + i + ": " +
+                         appender.getMessage(i));
+                }
             }
+        } finally {
+            appender.clear();
         }
-        appender.clear();
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry,
@@ -295,8 +300,7 @@ public class WorldTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        appender.assertNoLogMessages();
 
         if (ebComp != null) ebComp.closeAll();
         if (gtComp != null) gtComp.closeAll();

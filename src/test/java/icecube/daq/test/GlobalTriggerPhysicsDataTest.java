@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.PayloadFileReader;
@@ -198,8 +199,7 @@ public class GlobalTriggerPhysicsDataTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        appender.assertNoLogMessages();
 
         if (tails != null) {
             DAQTestUtil.closePipeList(tails);

@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.RequestPayloadOutputEngine;
@@ -86,28 +87,32 @@ public class EventBuilderEndToEndTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                String msg = (String) appender.getMessage(i);
 
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.startsWith("Sending empty event for window") &&
-                !msg.endsWith("does not exist!  Using current directory.") &&
-                !msg.equals("Cannot write to " +
-                            FileDispatcher.DISPATCH_DEST_STORAGE + "!") &&
-                !msg.startsWith("Couldn't move temp file ") &&
-                !msg.equals("The last temp-physics file was not moved" +
-                            " to the dispatch storage!!!") &&
-                !msg.startsWith("Couldn't stop dispatcher (") &&
-                !msg.startsWith("Switching from run ") &&
-                !msg.startsWith("GoodTime Stats: "))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+                if (!(msg.startsWith("Clearing ") &&
+                      msg.endsWith(" rope entries")) &&
+                    !msg.startsWith("Resetting counter ") &&
+                    !msg.startsWith("No match for timegate ") &&
+                    !msg.startsWith("Sending empty event for window") &&
+                    !msg.endsWith(" not exist!  Using current directory.") &&
+                    !msg.equals("Cannot write to " +
+                                FileDispatcher.DISPATCH_DEST_STORAGE + "!") &&
+                    !msg.startsWith("Couldn't move temp file ") &&
+                    !msg.equals("The last temp-physics file was not moved" +
+                                " to the dispatch storage!!!") &&
+                    !msg.startsWith("Couldn't stop dispatcher (") &&
+                    !msg.startsWith("Switching from run ") &&
+                    !msg.startsWith("GoodTime Stats: "))
+                {
+                    fail("Bad log message#" + i + ": " +
+                         appender.getMessage(i));
+                }
             }
+        } finally {
+            appender.clear();
         }
-        appender.clear();
     }
 
     private List<HitData> getHitList(IDOMRegistry domRegistry)
@@ -270,8 +275,7 @@ public class EventBuilderEndToEndTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        appender.assertNoLogMessages();
 
         if (gtPipe != null) {
             try {

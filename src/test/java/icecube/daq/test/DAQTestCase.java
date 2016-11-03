@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.io.DAQComponentOutputProcess;
@@ -75,20 +76,24 @@ public abstract class DAQTestCase
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                String msg = (String) appender.getMessage(i);
 
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.startsWith("Sending empty event for window") &&
-                !msg.endsWith("does not exist!  Using current directory."))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+                if (!(msg.startsWith("Clearing ") &&
+                      msg.endsWith(" rope entries")) &&
+                    !msg.startsWith("Resetting counter ") &&
+                    !msg.startsWith("No match for timegate ") &&
+                    !msg.startsWith("Sending empty event for window") &&
+                    !msg.endsWith("does not exist!  Using current directory."))
+                {
+                    fail("Bad log message#" + i + ": " +
+                         appender.getMessage(i));
+                }
             }
+        } finally {
+            appender.clear();
         }
-        appender.clear();
     }
 
     private static List<Pipe> connectHubsAndEB(StringHubComponent[] shComps,
@@ -397,8 +402,7 @@ public abstract class DAQTestCase
     {
         DAQTestUtil.logOpenChannels();
 
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        appender.assertNoLogMessages();
 
         IComponent[] comps = new IComponent[] {
             ebComp, gtComp, itComp, iiComp
