@@ -8,6 +8,7 @@ import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
@@ -31,6 +32,7 @@ import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -63,6 +65,9 @@ public class WorldTest
     private static final int NUM_HUBS = 5;
 
     private static final int RUN_NUMBER = 1234;
+
+    private static final String DISPATCH_DEST =
+        System.getProperty("java.io.tmpdir");
 
     private IniceTriggerComponent iiComp;
     private GlobalTriggerComponent gtComp;
@@ -241,6 +246,33 @@ public class WorldTest
         return list;
     }
 
+    private void removeDispatchedFiles()
+    {
+        File dir = new File(DISPATCH_DEST);
+        for (File file : dir.listFiles(new FilenameFilter() {
+                public boolean accept(File dir, String name) {
+                    if (!name.startsWith("physics-") &&
+                        !name.startsWith("moni-") &&
+                        !name.startsWith("sn-") &&
+                        !name.startsWith("tcal-"))
+                    {
+                        return false;
+                    }
+                    return name.endsWith(".dat");
+                }
+            }))
+        {
+            try {
+                if (!file.delete()) {
+                    System.err.println("Cannot delete \"" + file + "\"");
+                }
+            } catch (SecurityException se) {
+                System.err.println("Cannot delete \"" + file + "\"");
+                se.printStackTrace();
+            }
+        }
+    }
+
     private void sendHits(List<ISourceID> idList, List<HitData> hitList,
                           int startIndex, int numToSend)
         throws IOException
@@ -302,9 +334,17 @@ public class WorldTest
     {
         appender.assertNoLogMessages();
 
-        if (ebComp != null) ebComp.closeAll();
-        if (gtComp != null) gtComp.closeAll();
-        if (iiComp != null) iiComp.closeAll();
+        for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
+            if (comp != null) {
+                try {
+                    comp.closeAll();
+                } catch (IOException ioe) {
+                    System.err.println("Failed to close " + comp);
+                    ioe.printStackTrace();
+                }
+            }
+        }
+        removeDispatchedFiles();
 
         if (iiTails != null) {
             DAQTestUtil.closePipeList(iiTails);
@@ -348,7 +388,7 @@ public class WorldTest
         // set up event builder
         ebComp = new EBComponent();
         ebComp.setValidateEvents(true);
-        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setDispatchDestStorage(DISPATCH_DEST);
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
         ebComp.initialize();
@@ -471,7 +511,7 @@ public class WorldTest
         // set up event builder
         ebComp = new EBComponent();
         ebComp.setValidateEvents(true);
-        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setDispatchDestStorage(DISPATCH_DEST);
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.setAlerter(new MockAlerter());
         ebComp.initialize();
