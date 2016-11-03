@@ -378,8 +378,6 @@ public abstract class DAQTestCase
 
         DAQTestUtil.clearCachedChannels();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
     }

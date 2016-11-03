@@ -133,8 +133,6 @@ public class InIceTriggerEndToEndTest
     {
         super.setUp();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
     }
@@ -149,7 +147,13 @@ public class InIceTriggerEndToEndTest
     {
         appender.assertNoLogMessages();
 
-        if (comp != null) comp.closeAll();
+        if (comp != null) {
+            try {
+                comp.closeAll();
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+        }
 
         if (tails != null) {
             DAQTestUtil.closePipeList(tails);

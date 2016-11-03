@@ -185,8 +185,6 @@ public class GlobalTriggerPhysicsDataTest
     {
         super.setUp();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
     }
@@ -329,10 +327,7 @@ public class GlobalTriggerPhysicsDataTest
         try {
             if (!appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
                 for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-                    final String msg = (String) appender.getMessage(i);
-                    if (!msg.startsWith("Resetting counter ")) {
-                        fail("Got unexpected log message #" + i + ": " + msg);
-                    }
+                    appender.assertLogMessage("Resetting counter ");
                 }
             }
         } finally {

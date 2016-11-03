@@ -254,8 +254,6 @@ public class EventBuilderEndToEndTest
     {
         super.setUp();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
     }

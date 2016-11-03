@@ -9,7 +9,6 @@ import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -55,7 +54,16 @@ class AlgorithmData
     }
 }
 
+interface ComponentMonitor
+{
+    boolean check();
+    String getPrefix();
+    Splicer getSplicer();
+    boolean isStopped();
+}
+
 class TriggerMonitor
+    implements ComponentMonitor
 {
     private TriggerComponent comp;
     private String prefix;
@@ -151,6 +159,11 @@ class TriggerMonitor
         return changed;
     }
 
+    public String getPrefix()
+    {
+        return prefix;
+    }
+
     public long getSent()
     {
         return sent;
@@ -194,6 +207,7 @@ class TriggerMonitor
 }
 
 class EventBuilderMonitor
+    implements ComponentMonitor
 {
     private EBComponent comp;
     private String prefix;
@@ -340,6 +354,11 @@ class EventBuilderMonitor
         if (buf.length() > 0) System.err.println("** BackEnd: " + buf);
     }
 
+    public String getPrefix()
+    {
+        return prefix;
+    }
+
     public long getSent()
     {
         return evtsSent;
@@ -378,16 +397,17 @@ public class ActivityMonitor
     private TriggerMonitor itMon;
     private TriggerMonitor gtMon;
     private EventBuilderMonitor ebMon;
+    private ComponentMonitor monList;
 
-    ActivityMonitor(IniceTriggerComponent iiComp,
-                    IcetopTriggerComponent itComp,
-                    GlobalTriggerComponent gtComp,
-                    EBComponent ebComp)
+    public ActivityMonitor(IniceTriggerComponent iiComp,
+                           IcetopTriggerComponent itComp,
+                           GlobalTriggerComponent gtComp,
+                           EBComponent ebComp)
     {
-        this.iiMon = new TriggerMonitor(iiComp, "II");
-        this.itMon = new TriggerMonitor(itComp, "IT");
-        this.gtMon = new TriggerMonitor(gtComp, "GT");
-        this.ebMon = new EventBuilderMonitor(ebComp, "EB");
+        iiMon = new TriggerMonitor(iiComp, "II");
+        itMon = new TriggerMonitor(itComp, "IT");
+        gtMon = new TriggerMonitor(gtComp, "GT");
+        ebMon = new EventBuilderMonitor(ebComp, "EB");
     }
 
     public void dumpBackEndStats()
@@ -400,52 +420,73 @@ public class ActivityMonitor
         System.err.println("#" + rep + ":" + iiMon + itMon + gtMon + ebMon);
 
         if (dumpSplicers && iiMon.getSent() < expEvents + 1) {
-            dumpSplicer("II", iiMon.getSplicer());
+            dumpSplicer(iiMon);
         }
 
         if (dumpSplicers && itMon.getSent() < expEvents + 1) {
-            dumpSplicer("IT", itMon.getSplicer());
+            dumpSplicer(itMon);
         }
 
         if (dumpSplicers && gtMon.getSent() < iiMon.getSent()) {
-            dumpSplicer("GT", gtMon.getSplicer());
+            dumpSplicer(gtMon);
         }
 
         if (dumpSplicers && ebMon.getSent() + 1 < gtMon.getSent()) {
-            dumpSplicer("EB", ebMon.getSplicer());
+            dumpSplicer(ebMon);
         }
     }
 
-    private void dumpSplicer(String title, Splicer splicer)
+    private void dumpSplicer(ComponentMonitor mon)
     {
-        System.err.println("*********************");
-        System.err.println("*** " + title + " Splicer");
-        System.err.println("*********************");
-        String[] desc = ((HKN1Splicer) splicer).dumpDescription();
-        for (int d = 0; d < desc.length; d++) {
-            System.err.println("  " + desc[d]);
+        final String title = mon.getPrefix();
+        final Splicer splicer = mon.getSplicer();
+
+        final String splats = "*********************";
+        if (!(splicer instanceof HKN1Splicer)) {
+            System.err.println(splats);
+            System.err.println("*** Unknown " + title + " Splicer: " +
+                               splicer.getClass().getName());
+            System.err.println(splats);
+        } else {
+            System.err.println(splats);
+            System.err.println("*** " + title + " Splicer");
+            System.err.println(splats);
+            String[] desc = ((HKN1Splicer) splicer).dumpDescription();
+            for (int d = 0; d < desc.length; d++) {
+                System.err.println("  " + desc[d]);
+            }
         }
     }
 
-    boolean waitForStasis(int staticReps, int maxReps, int expEvents,
-                          boolean verbose, boolean dumpSplicers)
+    private boolean isChanged()
+    {
+        boolean changed = false;
+
+        changed |= iiMon.check();
+        changed |= itMon.check();
+        changed |= gtMon.check();
+        changed |= ebMon.check();
+
+        return changed;
+    }
+
+    private boolean isStopped()
+    {
+        return iiMon.isStopped() && itMon.isStopped() && gtMon.isStopped() &&
+            ebMon.isStopped();
+    }
+
+    public boolean waitForStasis(int staticReps, int maxReps, int expEvents,
+                                 boolean verbose, boolean dumpSplicers)
     {
         final int SLEEP_MSEC = 100;
 
         int numStatic = 0;
         for (int i = 0; i < maxReps; i++) {
-            boolean changed = false;
 
-            changed |= iiMon.check();
-            changed |= itMon.check();
-            changed |= gtMon.check();
-            changed |= ebMon.check();
-
-            if (changed) {
+            if (isChanged()) {
                 numStatic = 0;
-            } else if (iiMon.isStopped() && itMon.isStopped() &&
-                       gtMon.isStopped() && ebMon.isStopped())
-            {
+            } else if (isStopped()) {
                 numStatic += staticReps / 2;
             } else {
                 numStatic++;

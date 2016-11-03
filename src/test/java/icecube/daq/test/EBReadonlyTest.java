@@ -8,6 +8,7 @@ import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
@@ -748,8 +749,6 @@ public class EBReadonlyTest
     {
         super.setUp();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
 
@@ -764,19 +763,24 @@ public class EBReadonlyTest
     protected void tearDown()
         throws Exception
     {
-        int failed = 0;
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
-            if (!msg.startsWith("Could not add data ")) {
-                appender.dumpEvent(i);
-                failed++;
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                appender.assertLogMessage("Could not add data ");
+            }
+            appender.assertNoLogMessages();
+        } finally {
+            appender.clear();
+        }
+
+        for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
+            if (comp != null) {
+                try {
+                    comp.closeAll();
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                }
             }
         }
-        assertEquals("Found unknown log messages", 0, failed);
-
-        if (ebComp != null) ebComp.closeAll();
-        if (gtComp != null) gtComp.closeAll();
-        if (iiComp != null) iiComp.closeAll();
 
         if (iiTails != null) {
             for (int i = 0; i < iiTails.length; i++) {
