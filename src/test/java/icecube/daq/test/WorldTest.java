@@ -251,14 +251,17 @@ public class WorldTest
         File dir = new File(DISPATCH_DEST);
         for (File file : dir.listFiles(new FilenameFilter() {
                 public boolean accept(File dir, String name) {
-                    if (!name.startsWith("physics-") &&
-                        !name.startsWith("moni-") &&
-                        !name.startsWith("sn-") &&
-                        !name.startsWith("tcal-"))
+                    if (!name.startsWith("physics_") &&
+                        !name.startsWith("moni_") &&
+                        !name.startsWith("sn_") &&
+                        !name.startsWith("tcal_"))
                     {
                         return false;
                     }
-                    return name.endsWith(".dat");
+                    if (!name.endsWith(".dat")) {
+                        return false;
+                    }
+                    return true;
                 }
             }))
         {
@@ -334,17 +337,20 @@ public class WorldTest
     {
         appender.assertNoLogMessages();
 
-        for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
-            if (comp != null) {
-                try {
-                    comp.closeAll();
-                } catch (IOException ioe) {
-                    System.err.println("Failed to close " + comp);
-                    ioe.printStackTrace();
+        try {
+            for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
+                if (comp != null) {
+                    try {
+                        comp.closeAll();
+                    } catch (IOException ioe) {
+                        System.err.println("Failed to close " + comp);
+                        ioe.printStackTrace();
+                    }
                 }
             }
+        } finally {
+            removeDispatchedFiles();
         }
-        removeDispatchedFiles();
 
         if (iiTails != null) {
             DAQTestUtil.closePipeList(iiTails);
@@ -476,8 +482,10 @@ public class WorldTest
         DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null);
         DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);
 
-        System.err.println("XXX Ignoring extra log msgs");
-        appender.clear();
+        if (appender.getNumberOfMessages() > 0) {
+            System.err.println("XXX Ignoring extra log msgs");
+            appender.clear();
+        }
     }
 
     public void testSwitchRun()
@@ -621,8 +629,10 @@ public class WorldTest
         DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, false);
         DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);
 
-        System.err.println("XXX Ignoring extra log msgs");
-        appender.clear();
+        if (appender.getNumberOfMessages() > 0) {
+            System.err.println("XXX Ignoring extra log msgs");
+            appender.clear();
+        }
     }
 
     public static void main(String[] args)
