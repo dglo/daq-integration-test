@@ -16,6 +16,7 @@ import icecube.daq.trigger.component.TriggerComponent;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -463,6 +464,36 @@ public final class DAQTestUtil
     {
         for (ChannelData cd : chanData) {
             cd.logOpen();
+        }
+    }
+
+    public static void removeDispatchedFiles(String destDir)
+    {
+        File dir = new File(destDir);
+        for (File file : dir.listFiles(new FilenameFilter() {
+                public boolean accept(File dir, String name) {
+                    if (!name.startsWith("physics_") &&
+                        !name.startsWith("moni_") &&
+                        !name.startsWith("sn_") &&
+                        !name.startsWith("tcal_"))
+                    {
+                        return false;
+                    }
+                    if (!name.endsWith(".dat")) {
+                        return false;
+                    }
+                    return true;
+                }
+            }))
+        {
+            try {
+                if (!file.delete()) {
+                    System.err.println("Cannot delete \"" + file + "\"");
+                }
+            } catch (SecurityException se) {
+                System.err.println("Cannot delete \"" + file + "\"");
+                se.printStackTrace();
+            }
         }
     }
 

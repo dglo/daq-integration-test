@@ -57,6 +57,9 @@ public abstract class DAQTestCase
 
     private static final int RUN_NUMBER = 1234;
 
+    private static final String DISPATCH_DEST =
+        System.getProperty("java.io.tmpdir");
+
     private StringHubComponent[] shComps;
     private IniceTriggerComponent iiComp;
     private IcetopTriggerComponent itComp;
@@ -398,33 +401,35 @@ public abstract class DAQTestCase
     protected void tearDown()
         throws Exception
     {
-        DAQTestUtil.logOpenChannels();
+        try {
+            appender.assertNoLogMessages();
 
-        appender.assertNoLogMessages();
-
-        IComponent[] comps = new IComponent[] {
-            ebComp, gtComp, itComp, iiComp
-        };
-        for (IComponent comp : comps) {
-            if (comp != null) {
-                try {
-                    comp.closeAll();
-                } catch (IOException ioe) {
-                    System.err.println("While closing " + comp);
-                    ioe.printStackTrace();
+            IComponent[] comps = new IComponent[] {
+                ebComp, gtComp, itComp, iiComp
+            };
+            for (IComponent comp : comps) {
+                if (comp != null) {
+                    try {
+                        comp.closeAll();
+                    } catch (IOException ioe) {
+                        System.err.println("While closing " + comp);
+                        ioe.printStackTrace();
+                    }
                 }
             }
-        }
 
-        if (shComps != null) {
-            for (IComponent comp : shComps) {
-                try {
-                    comp.closeAll();
-                } catch (IOException ioe) {
-                    System.err.println("While closing " + comp);
-                    ioe.printStackTrace();
+            if (shComps != null) {
+                for (IComponent comp : shComps) {
+                    try {
+                        comp.closeAll();
+                    } catch (IOException ioe) {
+                        System.err.println("While closing " + comp);
+                        ioe.printStackTrace();
+                    }
                 }
             }
+        } finally {
+            DAQTestUtil.removeDispatchedFiles(DISPATCH_DEST);
         }
 
         if (pipeList != null) {
@@ -501,7 +506,7 @@ public abstract class DAQTestCase
         // set up event builder
         ebComp = new EBComponent();
         ebComp.setValidateEvents(true);
-        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp.setDispatchDestStorage(DISPATCH_DEST);
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
         ebComp.initialize();
 

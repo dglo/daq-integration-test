@@ -32,7 +32,6 @@ import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -246,36 +245,6 @@ public class WorldTest
         return list;
     }
 
-    private void removeDispatchedFiles()
-    {
-        File dir = new File(DISPATCH_DEST);
-        for (File file : dir.listFiles(new FilenameFilter() {
-                public boolean accept(File dir, String name) {
-                    if (!name.startsWith("physics_") &&
-                        !name.startsWith("moni_") &&
-                        !name.startsWith("sn_") &&
-                        !name.startsWith("tcal_"))
-                    {
-                        return false;
-                    }
-                    if (!name.endsWith(".dat")) {
-                        return false;
-                    }
-                    return true;
-                }
-            }))
-        {
-            try {
-                if (!file.delete()) {
-                    System.err.println("Cannot delete \"" + file + "\"");
-                }
-            } catch (SecurityException se) {
-                System.err.println("Cannot delete \"" + file + "\"");
-                se.printStackTrace();
-            }
-        }
-    }
-
     private void sendHits(List<ISourceID> idList, List<HitData> hitList,
                           int startIndex, int numToSend)
         throws IOException
@@ -349,7 +318,7 @@ public class WorldTest
                 }
             }
         } finally {
-            removeDispatchedFiles();
+            DAQTestUtil.removeDispatchedFiles(DISPATCH_DEST);
         }
 
         if (iiTails != null) {
