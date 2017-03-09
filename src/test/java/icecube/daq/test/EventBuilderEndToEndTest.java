@@ -96,7 +96,8 @@ public class EventBuilderEndToEndTest
                     !msg.startsWith("Resetting counter ") &&
                     !msg.startsWith("No match for timegate ") &&
                     !msg.startsWith("Sending empty event for window") &&
-                    !msg.endsWith(" not exist!  Using current directory.") &&
+                    !msg.endsWith(" not exist or is not writable!" +
+                                  "  Using current directory.") &&
                     !msg.equals("Cannot write to " +
                                 FileDispatcher.DISPATCH_DEST_STORAGE + "!") &&
                     !msg.startsWith("Couldn't move temp file ") &&
