@@ -557,7 +557,7 @@ public final class DAQTestUtil
                 // starting hubs involves hardware initialization
                 // so do the bare minimum needed to init Sender
                 shComps[i].setRunNumber(runNumber);
-                shComps[i].getSender().reset();
+                shComps[i].getSender().startup();
                 procList.add(shComps[i].getHitWriter());
                 procList.add(shComps[i].getRequestReader());
                 procList.add(shComps[i].getDataWriter());

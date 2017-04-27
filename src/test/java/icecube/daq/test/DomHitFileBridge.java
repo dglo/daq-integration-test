@@ -1,7 +1,7 @@
 package icecube.daq.test;
 
 import icecube.daq.io.DAQComponentOutputProcess;
-import icecube.daq.sender.Sender;
+import icecube.daq.sender.SenderSubsystem;
 import icecube.daq.stringhub.StringHubComponent;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ public class DomHitFileBridge
     private static final int STOP_MESSAGE_LENGTH = 32;
 
     private int hubNum;
-    private Sender sender;
+    private SenderSubsystem sender;
     private DAQComponentOutputProcess hitOut;
 
     public DomHitFileBridge(File dataFile, StringHubComponent shComp)
@@ -70,11 +70,11 @@ public class DomHitFileBridge
         return hitOut.getRecordsSent();
     }
 
-    void write(ByteBuffer buf)
+    void write(ByteBuffer buf) throws IOException
     {
         // don't overwhelm other threads
         Thread.yield();
 
-        sender.consume(buf);
+        sender.getHitInput().consume(buf);
     }
 }

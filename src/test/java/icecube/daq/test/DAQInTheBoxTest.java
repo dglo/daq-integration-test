@@ -638,7 +638,7 @@ public class DAQInTheBoxTest
         idList = getSourceIds(hitList);
     }
 
-    void sendData(StringHubComponent[] shComps)
+    void sendData(StringHubComponent[] shComps) throws IOException
     {
         for (HitData hd : hitList) {
             ByteBuffer rawBuf = ByteBuffer.allocate(HitData.RAW_LENGTH);
@@ -649,7 +649,7 @@ public class DAQInTheBoxTest
             for (int i = 0; i < shComps.length; i++) {
                 int srcId = shComps[i].getHubId();
                 if (srcId == hd.getSourceID()) {
-                    shComps[i].getSender().consume(rawBuf);
+                    shComps[i].getSender().getHitInput().consume(rawBuf);
                     written = true;
                     break;
                 }
@@ -672,7 +672,8 @@ public class DAQInTheBoxTest
         stopBuf.putLong(24, Long.MAX_VALUE);
 
         for (int i = 0; i < shComps.length; i++) {
-            shComps[i].getSender().consume(stopBuf.asReadOnlyBuffer());
+            shComps[i].getSender().getHitInput().consume(
+                    stopBuf.asReadOnlyBuffer());
         }
     }
 

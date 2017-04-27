@@ -9,14 +9,10 @@ import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.juggler.component.IComponent;
+import icecube.daq.monitoring.SenderMXBean;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.ISourceID;
-import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadFormatException;
-import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.impl.VitreousBufferCache;
-import icecube.daq.sender.Sender;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
@@ -31,19 +27,13 @@ import icecube.daq.util.Leapseconds;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.Selector;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-import junit.framework.Test;
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -249,7 +239,7 @@ public abstract class DAQTestCase
         DAQComponentOutputProcess dataOut = shComp.getDataWriter();
         DAQComponentOutputProcess hitOut = shComp.getHitWriter();
         PayloadReader reqRdr = shComp.getRequestReader();
-        Sender sender = shComp.getSender();
+        SenderMXBean sender = shComp.getSenderMonitor();
 
         while (numTries < maxTries) {
             boolean stopped;
