@@ -46,13 +46,15 @@ public class DAQInTheBoxTest
         super(name);
     }
 
-    StringHubComponent[] buildStringHubComponents()
+    @Override
+    StringHubComponent[] buildStringHubComponents(String configDir)
         throws DAQCompException, IOException
     {
         StringHubComponent[] shComps = new StringHubComponent[idList.size()];
         int n = 0;
         for (ISourceID srcId : idList) {
             shComps[n] = new StringHubComponent(srcId.getSourceID());
+            shComps[n].setGlobalConfigurationDir(configDir);
             shComps[n].initialize();
             shComps[n].forceRandomMode();
             shComps[n].start(false);

@@ -48,7 +48,8 @@ public class DAQInTheFileTest
         super(name);
     }
 
-    StringHubComponent[] buildStringHubComponents()
+    @Override
+    StringHubComponent[] buildStringHubComponents(String configFile)
         throws DAQCompException, IOException
     {
         StringHubComponent[] shComps = new StringHubComponent[shMap.size()];
@@ -57,6 +58,7 @@ public class DAQInTheFileTest
         int num = 0;
         for (ISourceID srcId : shMap.keySet()) {
             shComps[num] = new StringHubComponent(srcId.getSourceID());
+            shComps[num].setGlobalConfigurationDir(configFile);
             shComps[num].initialize();
             shComps[num].forceRandomMode();
             shComps[num].start(false);

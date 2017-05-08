@@ -64,7 +64,7 @@ public abstract class DAQTestCase
         super(name);
     }
 
-    abstract StringHubComponent[] buildStringHubComponents()
+    abstract StringHubComponent[] buildStringHubComponents(String configDir)
         throws DAQCompException, IOException;
 
     private void checkLogMessages()
@@ -466,9 +466,8 @@ public abstract class DAQTestCase
         PayloadValidator validator = new GeneralValidator();
 
         // set up string hubs
-        shComps = buildStringHubComponents();
+        shComps = buildStringHubComponents(cfgFile.getParent());
         for (int i = 0; i < shComps.length; i++) {
-            shComps[i].setGlobalConfigurationDir(cfgFile.getParent());
             shComps[i].setAlerter(new MockAlerter());
         }
 
