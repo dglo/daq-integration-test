@@ -18,6 +18,7 @@ import icecube.daq.trigger.algorithm.AbstractTrigger;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -159,6 +160,8 @@ public class InIceTriggerEndToEndTest
             DAQTestUtil.closePipeList(tails);
         }
 
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
@@ -181,6 +184,9 @@ public class InIceTriggerEndToEndTest
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         // set up in-ice trigger
         comp = new IniceTriggerComponent();

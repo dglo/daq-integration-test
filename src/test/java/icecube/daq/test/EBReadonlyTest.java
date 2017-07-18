@@ -32,6 +32,7 @@ import icecube.daq.util.DOMInfo;
 import icecube.daq.util.DOMRegistryException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -799,6 +800,8 @@ public class EBReadonlyTest
 
         //openFiles.diff(true, true);
 
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
@@ -815,6 +818,9 @@ public class EBReadonlyTest
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "in-ice-mbt-5");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         IDOMRegistry domRegistry;
         try {

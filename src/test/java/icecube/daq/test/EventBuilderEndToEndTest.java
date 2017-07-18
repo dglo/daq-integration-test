@@ -27,6 +27,7 @@ import icecube.daq.util.DOMRegistryException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.DOMInfo;
 import icecube.daq.util.IDOMRegistry;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -257,6 +258,17 @@ public class EventBuilderEndToEndTest
 
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
+
+        // ensure LocatePDAQ uses the test version of the config directory
+        File configDir =
+            new File(getClass().getResource("/config").getPath());
+        if (!configDir.exists()) {
+            throw new IllegalArgumentException("Cannot find config" +
+                                               " directory under " +
+                                               getClass().getResource("/"));
+        }
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           configDir.getAbsolutePath());
     }
 
     public static Test suite()
@@ -274,19 +286,23 @@ public class EventBuilderEndToEndTest
     protected void tearDown()
         throws Exception
     {
-        appender.assertNoLogMessages();
+        try {
+            appender.assertNoLogMessages();
 
-        if (gtPipe != null) {
-            try {
-                gtPipe.sink().close();
-            } catch (IOException ioe) {
-                // ignore errors
+            if (gtPipe != null) {
+                try {
+                    gtPipe.sink().close();
+                } catch (IOException ioe) {
+                    // ignore errors
+                }
+                try {
+                    gtPipe.source().close();
+                } catch (IOException ioe) {
+                    // ignore errors
+                }
             }
-            try {
-                gtPipe.source().close();
-            } catch (IOException ioe) {
-                // ignore errors
-            }
+        } finally {
+            System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
         }
 
         super.tearDown();

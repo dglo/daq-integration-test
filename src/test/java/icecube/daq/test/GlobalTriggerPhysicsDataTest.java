@@ -16,6 +16,7 @@ import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -197,10 +198,14 @@ public class GlobalTriggerPhysicsDataTest
     protected void tearDown()
         throws Exception
     {
-        appender.assertNoLogMessages();
+        try {
+            appender.assertNoLogMessages();
 
-        if (tails != null) {
-            DAQTestUtil.closePipeList(tails);
+            if (tails != null) {
+                DAQTestUtil.closePipeList(tails);
+            }
+        } finally {
+            System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
         }
 
         super.tearDown();
@@ -229,6 +234,9 @@ public class GlobalTriggerPhysicsDataTest
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         // set up global trigger
         GlobalTriggerComponent comp = new GlobalTriggerComponent();

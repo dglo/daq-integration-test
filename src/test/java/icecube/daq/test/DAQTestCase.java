@@ -24,6 +24,7 @@ import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.Leapseconds;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -435,6 +436,8 @@ public abstract class DAQTestCase
 
         DAQTestUtil.logOpenChannels();
 
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
@@ -452,7 +455,8 @@ public abstract class DAQTestCase
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-2013-no-physminbias-001");
 
-        Leapseconds.setConfigDirectory(cfgFile.getParentFile());
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         IDOMRegistry domRegistry;
         try {

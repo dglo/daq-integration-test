@@ -30,6 +30,7 @@ import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -304,9 +305,9 @@ public class WorldTest
     protected void tearDown()
         throws Exception
     {
-        appender.assertNoLogMessages();
-
         try {
+            appender.assertNoLogMessages();
+
             for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
                 if (comp != null) {
                     try {
@@ -329,6 +330,8 @@ public class WorldTest
 
         PayloadChecker.clearRunNumber();
 
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
@@ -345,6 +348,9 @@ public class WorldTest
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
                                         "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         IDOMRegistry domRegistry;
         try {
@@ -477,6 +483,9 @@ public class WorldTest
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         // get list of all hits
         List<HitData> hitList = getInIceHits(domRegistry, numEvents);
