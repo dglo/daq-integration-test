@@ -287,14 +287,6 @@ class EventBuilderMonitor
             comp.getBackEnd();
 
         StringBuilder buf = new StringBuilder();
-        if (be.getNumBadTriggerRequests() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("BadTRs ").append(be.getNumBadTriggerRequests());
-        }
-        if (be.getNumTriggerRequestsDropped() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DropTRs ").append(be.getNumTriggerRequestsDropped());
-        }
         if (be.getNumTriggerRequestsQueued() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("QueuedTRs ").append(be.getNumTriggerRequestsQueued());
@@ -302,22 +294,6 @@ class EventBuilderMonitor
         if (be.getNumTriggerRequestsReceived() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("TRsRcvd ").append(be.getNumTriggerRequestsReceived());
-        }
-        if (be.getNumNullReadouts() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("NullROs ").append(be.getNumNullReadouts());
-        }
-        if (be.getNumBadReadouts() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("BadROs ").append(be.getNumBadReadouts());
-        }
-        if (be.getNumReadoutsDiscarded() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DiscROs ").append(be.getNumReadoutsDiscarded());
-        }
-        if (be.getNumReadoutsDropped() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DropROs ").append(be.getNumReadoutsDropped());
         }
         if (be.getNumReadoutsQueued() > 0) {
             if (buf.length() > 0) buf.append(' ');
@@ -331,21 +307,9 @@ class EventBuilderMonitor
             if (buf.length() > 0) buf.append(' ');
             buf.append("ROsRcvd ").append(be.getNumReadoutsReceived());
         }
-        if (be.getNumNullEvents() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("NullEvts ").append(be.getNumNullEvents());
-        }
         if (be.getNumBadEvents() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("BadEvts ").append(be.getNumBadEvents());
-        }
-        if (be.getNumEventsFailed() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("FailedEvts ").append(be.getNumEventsFailed());
-        }
-        if (be.getNumEventsIgnored() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("IgnEvts ").append(be.getNumEventsIgnored());
         }
         if (be.getNumEventsSent() > 0) {
             if (buf.length() > 0) buf.append(' ');
