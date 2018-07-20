@@ -3,19 +3,77 @@ package icecube.daq.test;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.component.AmandaTriggerComponent;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.component.IcetopTriggerComponent;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 
+import java.util.Arrays;
+import java.util.HashMap;
+
+class AlgorithmData
+{
+    private int queuedIn;
+    private int queuedOut;
+    private long sent;
+
+    int getQueuedIn()
+    {
+        return queuedIn;
+    }
+
+    int getQueuedOut()
+    {
+        return queuedOut;
+    }
+
+    long getSent()
+    {
+        return sent;
+    }
+
+    void setQueuedIn(int val)
+    {
+        queuedIn = val;
+    }
+
+    void setQueuedOut(int val)
+    {
+        queuedOut = val;
+    }
+
+    void setSent(long val)
+    {
+        sent = val;
+    }
+
+    public String toString()
+    {
+        return String.format("%d->%d->%d", queuedIn, queuedOut, sent);
+    }
+}
+
+interface ComponentMonitor
+{
+    boolean check();
+    String getPrefix();
+    Splicer getSplicer();
+    boolean isStopped();
+}
+
 class TriggerMonitor
+    implements ComponentMonitor
 {
     private TriggerComponent comp;
     private String prefix;
 
     private long received;
     private long processed;
+    private HashMap<ITriggerAlgorithm, AlgorithmData> algoData =
+        new HashMap<ITriggerAlgorithm, AlgorithmData>();
+    private ITriggerAlgorithm[] algoKeys;
+    private long queuedOut;
     private long sent;
     private boolean stopped;
     private boolean summarized;
@@ -35,9 +93,6 @@ class TriggerMonitor
         boolean newStopped = (comp == null ||
                               (!comp.getReader().isRunning() &&
                                comp.getWriter().isStopped()));
-        if (stopped != newStopped) {
-            stopped = newStopped;
-        }
 
         boolean changed = false;
         if (comp != null && !summarized) {
@@ -45,18 +100,69 @@ class TriggerMonitor
                 received = comp.getPayloadsReceived();
                 changed = true;
             }
-            if (processed != comp.getTriggerManager().getCount()) {
-                processed = comp.getTriggerManager().getCount();
+
+            if (processed != comp.getTriggerManager().getTotalProcessed()) {
+                processed = comp.getTriggerManager().getTotalProcessed();
                 changed = true;
             }
+
+            Iterable<ITriggerAlgorithm> iter = comp.getAlgorithms();
+            if (iter == null) {
+                throw new Error("No algorithms available from " +
+                                comp.getClass().getName());
+            }
+
+            boolean added = false;
+            for (ITriggerAlgorithm algo : iter) {
+                if (!algoData.containsKey(algo)) {
+                    algoData.put(algo, new AlgorithmData());
+                    added = true;
+                }
+                AlgorithmData data = algoData.get(algo);
+                if (data.getQueuedIn() != algo.getInputQueueSize()) {
+                    data.setQueuedIn(algo.getInputQueueSize());
+                    changed = true;
+                }
+                if (data.getQueuedOut() != algo.getNumberOfCachedRequests()) {
+                    data.setQueuedOut(algo.getNumberOfCachedRequests());
+                    changed = true;
+                }
+                if (data.getSent() != algo.getSentTriggerCount()) {
+                    data.setSent(algo.getSentTriggerCount());
+                    changed = true;
+                }
+            }
+            if (added) {
+                Object[] tmpKeys = algoData.keySet().toArray();
+                Arrays.sort(tmpKeys);
+                algoKeys = new ITriggerAlgorithm[tmpKeys.length];
+                for (int i = 0; i < tmpKeys.length; i++) {
+                    algoKeys[i] = (ITriggerAlgorithm) tmpKeys[i];
+                }
+            }
+
+            if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
+                queuedOut = comp.getTriggerManager().getNumOutputsQueued();
+                changed = true;
+            }
+
             if (sent != comp.getPayloadsSent()) {
                 sent = comp.getPayloadsSent();
                 changed = true;
             }
         }
 
+        if (stopped != newStopped) {
+            stopped = newStopped;
+        }
+
         return changed;
-     }
+    }
+
+    public String getPrefix()
+    {
+        return prefix;
+    }
 
     public long getSent()
     {
@@ -84,12 +190,24 @@ class TriggerMonitor
         }
 
         summarized = stopped;
-        return String.format(" %s %d->%d->%d", prefix, received, processed,
-                             sent);
+
+        StringBuilder buf = new StringBuilder();
+
+        if (algoKeys != null) {
+            for (ITriggerAlgorithm algo : algoKeys) {
+                if (buf.length() > 0) buf.append(' ');
+                buf.append(algo.getTriggerName()).append(' ');
+                buf.append(algoData.get(algo));
+            }
+        }
+
+        return String.format(" %s %d->%d->[%s]->%d->%d", prefix, received,
+                             processed, buf.toString(), queuedOut, sent);
     }
 }
 
 class EventBuilderMonitor
+    implements ComponentMonitor
 {
     private EBComponent comp;
     private String prefix;
@@ -121,12 +239,9 @@ class EventBuilderMonitor
                                comp.getRequestWriter().isStopped() &&
                                !comp.getDataReader().isRunning() &&
                                !comp.getDispatcher().isStarted()));
-        if (stopped != newStopped) {
-            stopped = newStopped;
-        }
 
         boolean changed = false;
-        if (!stopped) {
+        if (!stopped && comp != null) {
             if (reqRcvd != comp.getTriggerRequestsReceived()) {
                 reqRcvd = comp.getTriggerRequestsReceived();
                 changed = true;
@@ -159,23 +274,19 @@ class EventBuilderMonitor
             }
         }
 
+        if (stopped != newStopped) {
+            stopped = newStopped;
+        }
+
         return changed;
     }
 
-    public void dumpBackEndStats()
+    public void dumpStats()
     {
         icecube.daq.eventBuilder.backend.EventBuilderBackEnd be =
             comp.getBackEnd();
 
         StringBuilder buf = new StringBuilder();
-        if (be.getNumBadTriggerRequests() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("BadTRs ").append(be.getNumBadTriggerRequests());
-        }
-        if (be.getNumTriggerRequestsDropped() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DropTRs ").append(be.getNumTriggerRequestsDropped());
-        }
         if (be.getNumTriggerRequestsQueued() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("QueuedTRs ").append(be.getNumTriggerRequestsQueued());
@@ -183,22 +294,6 @@ class EventBuilderMonitor
         if (be.getNumTriggerRequestsReceived() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("TRsRcvd ").append(be.getNumTriggerRequestsReceived());
-        }
-        if (be.getNumNullReadouts() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("NullROs ").append(be.getNumNullReadouts());
-        }
-        if (be.getNumBadReadouts() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("BadROs ").append(be.getNumBadReadouts());
-        }
-        if (be.getNumReadoutsDiscarded() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DiscROs ").append(be.getNumReadoutsDiscarded());
-        }
-        if (be.getNumReadoutsDropped() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("DropROs ").append(be.getNumReadoutsDropped());
         }
         if (be.getNumReadoutsQueued() > 0) {
             if (buf.length() > 0) buf.append(' ');
@@ -212,27 +307,20 @@ class EventBuilderMonitor
             if (buf.length() > 0) buf.append(' ');
             buf.append("ROsRcvd ").append(be.getNumReadoutsReceived());
         }
-        if (be.getNumNullEvents() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("NullEvts ").append(be.getNumNullEvents());
-        }
         if (be.getNumBadEvents() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("BadEvts ").append(be.getNumBadEvents());
-        }
-        if (be.getNumEventsFailed() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("FailedEvts ").append(be.getNumEventsFailed());
-        }
-        if (be.getNumEventsIgnored() > 0) {
-            if (buf.length() > 0) buf.append(' ');
-            buf.append("IgnEvts ").append(be.getNumEventsIgnored());
         }
         if (be.getNumEventsSent() > 0) {
             if (buf.length() > 0) buf.append(' ');
             buf.append("EvtsSent ").append(be.getNumEventsSent());
         }
         if (buf.length() > 0) System.err.println("** BackEnd: " + buf);
+    }
+
+    public String getPrefix()
+    {
+        return prefix;
     }
 
     public long getSent()
@@ -271,86 +359,98 @@ public class ActivityMonitor
 {
     private TriggerMonitor iiMon;
     private TriggerMonitor itMon;
-    private TriggerMonitor amMon;
     private TriggerMonitor gtMon;
     private EventBuilderMonitor ebMon;
+    private ComponentMonitor monList;
 
-    ActivityMonitor(IniceTriggerComponent iiComp,
-                    IcetopTriggerComponent itComp,
-                    AmandaTriggerComponent amComp,
-                    GlobalTriggerComponent gtComp,
-                    EBComponent ebComp)
+    public ActivityMonitor(IniceTriggerComponent iiComp,
+                           IcetopTriggerComponent itComp,
+                           GlobalTriggerComponent gtComp,
+                           EBComponent ebComp)
     {
-        this.iiMon = new TriggerMonitor(iiComp, "II");
-        this.itMon = new TriggerMonitor(itComp, "IT");
-        this.amMon = new TriggerMonitor(amComp, "AM");
-        this.gtMon = new TriggerMonitor(gtComp, "GT");
-        this.ebMon = new EventBuilderMonitor(ebComp, "EB");
+        iiMon = new TriggerMonitor(iiComp, "II");
+        itMon = new TriggerMonitor(itComp, "IT");
+        gtMon = new TriggerMonitor(gtComp, "GT");
+        ebMon = new EventBuilderMonitor(ebComp, "EB");
     }
 
     public void dumpBackEndStats()
     {
-        ebMon.dumpBackEndStats();
+        ebMon.dumpStats();
     }
 
     private void dumpProgress(int rep, int expEvents, boolean dumpSplicers)
     {
-        System.err.println("#" + rep + ":" + iiMon + itMon + amMon + gtMon +
-                           ebMon);
+        System.err.println("#" + rep + ":" + iiMon + itMon + gtMon + ebMon);
 
         if (dumpSplicers && iiMon.getSent() < expEvents + 1) {
-            dumpSplicer("II", iiMon.getSplicer());
+            dumpSplicer(iiMon);
         }
 
         if (dumpSplicers && itMon.getSent() < expEvents + 1) {
-            dumpSplicer("IT", itMon.getSplicer());
-        }
-
-        if (dumpSplicers && amMon.getSent() < expEvents + 1) {
-            dumpSplicer("AM", amMon.getSplicer());
+            dumpSplicer(itMon);
         }
 
         if (dumpSplicers && gtMon.getSent() < iiMon.getSent()) {
-            dumpSplicer("GT", gtMon.getSplicer());
+            dumpSplicer(gtMon);
         }
 
         if (dumpSplicers && ebMon.getSent() + 1 < gtMon.getSent()) {
-            dumpSplicer("EB", ebMon.getSplicer());
+            dumpSplicer(ebMon);
         }
     }
 
-    private void dumpSplicer(String title, Splicer splicer)
+    private void dumpSplicer(ComponentMonitor mon)
     {
-        System.err.println("*********************");
-        System.err.println("*** " + title + " Splicer");
-        System.err.println("*********************");
-        String[] desc = ((HKN1Splicer) splicer).dumpDescription();
-        for (int d = 0; d < desc.length; d++) {
-            System.err.println("  " + desc[d]);
+        final String title = mon.getPrefix();
+        final Splicer splicer = mon.getSplicer();
+
+        final String splats = "*********************";
+        if (!(splicer instanceof HKN1Splicer)) {
+            System.err.println(splats);
+            System.err.println("*** Unknown " + title + " Splicer: " +
+                               splicer.getClass().getName());
+            System.err.println(splats);
+        } else {
+            System.err.println(splats);
+            System.err.println("*** " + title + " Splicer");
+            System.err.println(splats);
+            String[] desc = ((HKN1Splicer) splicer).dumpDescription();
+            for (int d = 0; d < desc.length; d++) {
+                System.err.println("  " + desc[d]);
+            }
         }
     }
 
-    boolean waitForStasis(int staticReps, int maxReps, int expEvents,
-                          boolean verbose, boolean dumpSplicers)
+    private boolean isChanged()
+    {
+        boolean changed = false;
+
+        changed |= iiMon.check();
+        changed |= itMon.check();
+        changed |= gtMon.check();
+        changed |= ebMon.check();
+
+        return changed;
+    }
+
+    private boolean isStopped()
+    {
+        return iiMon.isStopped() && itMon.isStopped() && gtMon.isStopped() &&
+            ebMon.isStopped();
+    }
+
+    public boolean waitForStasis(int staticReps, int maxReps, int expEvents,
+                                 boolean verbose, boolean dumpSplicers)
     {
         final int SLEEP_MSEC = 100;
 
         int numStatic = 0;
         for (int i = 0; i < maxReps; i++) {
-            boolean changed = false;
 
-            changed |= iiMon.check();
-            changed |= itMon.check();
-            changed |= amMon.check();
-            changed |= gtMon.check();
-            changed |= ebMon.check();
-
-            if (changed) {
+            if (isChanged()) {
                 numStatic = 0;
-            } else if (iiMon.isStopped() && itMon.isStopped() &&
-                       amMon.isStopped() && gtMon.isStopped() &&
-                       ebMon.isStopped())
-            {
+            } else if (isStopped()) {
                 numStatic += staticReps / 2;
             } else {
                 numStatic++;

@@ -1,21 +1,22 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
-import icecube.daq.oldpayload.TriggerRegistry;
+import icecube.daq.payload.TriggerRegistry;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
-import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,20 +66,6 @@ public class GlobalTriggerPhysicsDataTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
-
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("Resetting decrement ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.contains("I3 GlobalTrigger Run Summary"))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
-            }
-        }
-        appender.clear();
     }
 
     private void dumpStreams(java.io.PrintStream out)
@@ -124,17 +111,23 @@ public class GlobalTriggerPhysicsDataTest
                 continue;
             }
 
-            if (!(payload instanceof IEventPayload)) {
+            if (payload instanceof IEventPayload) {
+                IEventPayload event = (IEventPayload) payload;
+                numEvents++;
+
+                extractTrigger(event.getTriggerRequestPayload());
+            } else if (payload instanceof ITriggerRequestPayload) {
+                ITriggerRequestPayload trig = (ITriggerRequestPayload) payload;
+                numEvents++;
+
+                extractTrigger(trig);
+            } else {
                 System.err.println("Ignoring non-event payload " +
                                    payload.getClass().getName() +
                                    " from " + dataPath);
                 continue;
             }
 
-            IEventPayload event = (IEventPayload) payload;
-            numEvents++;
-
-            extractTrigger(event.getTriggerRequestPayload());
         }
 
         return numEvents;
@@ -193,8 +186,6 @@ public class GlobalTriggerPhysicsDataTest
     {
         super.setUp();
 
-        appender.clear();
-
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
     }
@@ -207,11 +198,14 @@ public class GlobalTriggerPhysicsDataTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        try {
+            appender.assertNoLogMessages();
 
-        if (tails != null) {
-            DAQTestUtil.closePipeList(tails);
+            if (tails != null) {
+                DAQTestUtil.closePipeList(tails);
+            }
+        } finally {
+            System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
         }
 
         super.tearDown();
@@ -220,17 +214,18 @@ public class GlobalTriggerPhysicsDataTest
     public void testRealFile()
         throws DAQCompException, IOException
     {
-
         if (streams.size() == 0) {
-            String dataPath =
-                getClass().getResource("/global_trigger.physics.dat").getPath();
+            URL dataURL = getClass().getResource("/global_trigger.physics.dat");
+            if (dataURL == null) {
+                throw new IOException("Cannot find GT physics data");
+            }
 
-            numEventsInFile = extractStreams(dataPath);
+            numEventsInFile = extractStreams(dataURL.getPath());
             sortStreams();
             //dumpStreams(System.out);
 
             if (streams.size() == 0) {
-                throw new Error(dataPath + " seems to be empty");
+                throw new Error(dataURL.getPath() + " seems to be empty");
             }
         }
 
@@ -238,11 +233,17 @@ public class GlobalTriggerPhysicsDataTest
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-015");
+                                        "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         // set up global trigger
         GlobalTriggerComponent comp = new GlobalTriggerComponent();
+        comp.setAlerter(new MockAlerter());
         comp.setGlobalConfigurationDir(cfgFile.getParent());
+        comp.initialize();
+        comp.setFirstGoodTime(1);
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
@@ -255,7 +256,9 @@ public class GlobalTriggerPhysicsDataTest
         DAQTestUtil.connectToSink("gtOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, comp, null, null, null, null);
+        final int runNum = 12345;
+
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, runNum);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 
@@ -297,19 +300,22 @@ public class GlobalTriggerPhysicsDataTest
         }
 
         int expEvents;
-        if (numEventsInFile != 2494) {
-            expEvents = numEventsInFile;
+        if (numEventsInFile == 2494) {
+            expEvents = 2483;
+        } else if (numEventsInFile == 2455) {
+            expEvents = 2370;
         } else {
-            // hack for file with bogus events (the 1% out-of-order bug)
-            expEvents = 2481;
+            expEvents = numEventsInFile;
         }
 
         ActivityMonitor activity =
-            new ActivityMonitor(null, null, null, comp, null);
-        activity.waitForStasis(5, 150, expEvents, false, false);
+            new ActivityMonitor(null, null, comp, null);
 
+        activity.waitForStasis(10, 1000, expEvents, false, false);
         DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
                                      "GTStopMsg");
+
+        activity.waitForStasis(10, 1000, expEvents, false, false);
         DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "GTStopMsg");
 
         if (false) {
@@ -324,10 +330,16 @@ public class GlobalTriggerPhysicsDataTest
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
 
-        if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
+        DAQTestUtil.destroyComponentIO(null, comp, null, null, null);
+
+        try {
+            if (!appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
+                for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                    appender.assertLogMessage("Resetting counter ");
+                }
+            }
+        } finally {
             appender.clear();
-        } else {
-            checkLogMessages();
         }
     }
 
@@ -490,21 +502,17 @@ public class GlobalTriggerPhysicsDataTest
                     break;
                 }
 
-                if (buf == null || buf.capacity() < pay.getPayloadLength()) {
-                    buf = ByteBuffer.allocate(pay.getPayloadLength());
+                if (buf == null || buf.capacity() < pay.length()) {
+                    buf = ByteBuffer.allocate(pay.length());
                 }
 
                 buf.clear();
-
                 try {
                     pay.writePayload(true, 0, buf);
                     write(buf);
                 } catch (IOException ioe) {
                     LOG.error("Cannot write " + name + " payload #" +
                               numWritten, ioe);
-                } catch (PayloadException pe) {
-                    LOG.error("Cannot write " + name + " payload #" +
-                              numWritten, pe);
                 } finally {
                     numWritten++;
                 }

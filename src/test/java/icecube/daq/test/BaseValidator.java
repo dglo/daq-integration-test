@@ -4,7 +4,6 @@ import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.ILoadablePayload;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
-import icecube.daq.payload.PayloadException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,7 +35,7 @@ public abstract class BaseValidator
 
     static void dumpPayloadBytes(IWriteablePayload payload)
     {
-        ByteBuffer buf = ByteBuffer.allocate(payload.getPayloadLength());
+        ByteBuffer buf = ByteBuffer.allocate(payload.length());
 
         int len;
         try {
@@ -44,12 +43,9 @@ public abstract class BaseValidator
         } catch (java.io.IOException ioe) {
             ioe.printStackTrace();
             len = -1;
-        } catch (PayloadException pe) {
-            pe.printStackTrace();
-            len = -1;
         }
 
-        StringBuffer strbuf = new StringBuffer();
+        StringBuilder strbuf = new StringBuilder();
         for (int i = 0; i < buf.limit(); i++) {
             String str = Integer.toHexString(buf.get(i));
             if (str.length() < 2) {

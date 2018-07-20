@@ -12,7 +12,6 @@ import icecube.daq.payload.impl.VitreousBufferCache;
 import icecube.daq.splicer.SplicerException;
 import icecube.daq.stringhub.StringHubComponent;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -50,7 +48,8 @@ public class DAQInTheFileTest
         super(name);
     }
 
-    StringHubComponent[] buildStringHubComponents()
+    @Override
+    StringHubComponent[] buildStringHubComponents(String configFile)
         throws DAQCompException, IOException
     {
         StringHubComponent[] shComps = new StringHubComponent[shMap.size()];
@@ -58,23 +57,16 @@ public class DAQInTheFileTest
 
         int num = 0;
         for (ISourceID srcId : shMap.keySet()) {
-            shComps[num] =
-                new StringHubComponent(srcId.getSourceID(), true);
+            shComps[num] = new StringHubComponent(srcId.getSourceID());
+            shComps[num].setGlobalConfigurationDir(configFile);
+            shComps[num].initialize();
+            shComps[num].forceRandomMode();
             shComps[num].start(false);
             shInput[num] = new DomHitFileBridge(shMap.get(srcId), shComps[num]);
             num++;
         }
 
         return shComps;
-    }
-
-    int getNumberOfAmandaTriggerSent()
-    {
-        if (amInput == null) {
-            return 0;
-        }
-
-        return amInput.getNumberWritten();
     }
 
     int getNumberOfExpectedEvents()
@@ -100,9 +92,7 @@ public class DAQInTheFileTest
         shMap = new HashMap<ISourceID, File>();
 
         for (File f : dataDir.listFiles()) {
-            if (f.getName().equals("TRIG-amandaTrigger#0")) {
-                amTrigFile = f;
-            } else if (f.getName().startsWith("HIT-stringHub#")) {
+            if (f.getName().startsWith("HIT-stringHub#")) {
                 int num;
                 try {
                     num = Integer.parseInt(f.getName().substring(14));
@@ -119,14 +109,6 @@ public class DAQInTheFileTest
         }
     }
 
-    void initializeAmandaInput(WritableByteChannel amTail)
-        throws IOException
-    {
-        if (amTrigFile != null) {
-            amInput = new PayloadFileBridge(amTrigFile, amTail);
-        }
-    }
-
     private void monitorInputs(int maxTries)
     {
         int prevAM = 0;
@@ -137,7 +119,7 @@ public class DAQInTheFileTest
 
         int numTries = 0;
 
-        StringBuffer rptBuf = new StringBuffer();
+        StringBuilder rptBuf = new StringBuilder();
 
         boolean isRunning = true;
         while (isRunning && numTries < maxTries) {
@@ -214,13 +196,7 @@ public class DAQInTheFileTest
         }
     }
 
-    boolean needAmandaTrig()
-    {
-        return amTrigFile != null;
-    }
-
     void sendData(StringHubComponent[] shComps)
-        throws DataFormatException, IOException
     {
         for (int i = 0; i < shInput.length; i++) {
             shInput[i].start();

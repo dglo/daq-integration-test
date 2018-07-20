@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.SPDataAnalysis;
@@ -7,12 +8,13 @@ import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.IPayloadDestination;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
+import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
@@ -24,11 +26,11 @@ import icecube.daq.splicer.StrandTail;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.component.GlobalTriggerComponent;
 import icecube.daq.trigger.config.TriggerReadout;
-import icecube.daq.trigger.control.GlobalTriggerManager;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +42,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.DataFormatException;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -65,7 +66,9 @@ public class WorldTest
 
     private static final int RUN_NUMBER = 1234;
 
-    private MinimalServer minServer;
+    private static final String DISPATCH_DEST =
+        System.getProperty("java.io.tmpdir");
+
     private IniceTriggerComponent iiComp;
     private GlobalTriggerComponent gtComp;
     private EBComponent ebComp;
@@ -125,7 +128,6 @@ public class WorldTest
 
     private static ByteBuffer buildHit(long time, int recType, int cfgId,
                                        int srcId, long domId, int mode)
-        throws DataFormatException, IOException
     {
         final int bufLen = 38;
 
@@ -150,7 +152,6 @@ public class WorldTest
                                            long lastTime, int trigType,
                                            int cfgId, int srcId, int rrUID,
                                            int rrSrcId)
-        throws DataFormatException, IOException
     {
         final int bufLen = 104;
 
@@ -184,26 +185,29 @@ public class WorldTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                String msg = (String) appender.getMessage(i);
 
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate ") &&
-                !msg.startsWith("Sending empty event for window") &&
-                !msg.startsWith("Couldn't move temp file ") &&
-                !msg.endsWith("does not exist!  Using current directory."))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+                if (!(msg.startsWith("Clearing ") &&
+                      msg.endsWith(" rope entries")) &&
+                    !msg.startsWith("Resetting counter ") &&
+                    !msg.startsWith("No match for timegate ") &&
+                    !msg.startsWith("Sending empty event for window") &&
+                    !msg.startsWith("Couldn't move temp file ") &&
+                    !msg.endsWith(" not exist!  Using current directory."))
+                {
+                    fail("Bad log message#" + i + ": " +
+                         appender.getMessage(i));
+                }
             }
+        } finally {
+            appender.clear();
         }
-        appender.clear();
     }
 
     private static ArrayList<HitData> getInIceHits(IDOMRegistry domRegistry,
                                                    int numEvents)
-        throws DataFormatException, IOException
     {
         ArrayList<HitData> list =
             new ArrayList<HitData>();
@@ -289,16 +293,34 @@ public class WorldTest
         return new TestSuite(WorldTest.class);
     }
 
+    private void switchToNewRun(int runNum)
+        throws DAQCompException
+    {
+        iiComp.switching(runNum);
+        gtComp.switching(runNum);
+        ebComp.switching(runNum);
+        PayloadChecker.setRunNumber(runNum);
+    }
+
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        try {
+            appender.assertNoLogMessages();
 
-        if (minServer != null) minServer.close();
-        if (ebComp != null) ebComp.closeAll();
-        if (gtComp != null) gtComp.closeAll();
-        if (iiComp != null) iiComp.closeAll();
+            for (IComponent comp : new IComponent[] { ebComp, gtComp, iiComp }) {
+                if (comp != null) {
+                    try {
+                        comp.closeAll();
+                    } catch (IOException ioe) {
+                        System.err.println("Failed to close " + comp);
+                        ioe.printStackTrace();
+                    }
+                }
+            }
+        } finally {
+            DAQTestUtil.removeDispatchedFiles(DISPATCH_DEST);
+        }
 
         if (iiTails != null) {
             DAQTestUtil.closePipeList(iiTails);
@@ -306,28 +328,33 @@ public class WorldTest
 
         DAQTestUtil.logOpenChannels();
 
+        PayloadChecker.clearRunNumber();
+
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
     public void testEndToEnd()
-        throws DAQCompException, DataFormatException, IOException,
+        throws DAQCompException, IOException, PayloadFormatException,
                SplicerException, TriggerException
     {
-        final int numEvents = 20;
         final boolean dumpActivity = false;
         final boolean dumpSplicers = false;
         final boolean dumpBEStats = false;
 
-        minServer = new MinimalServer();
-        int port = minServer.getPort();
+        final int numEvents = 100;
 
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         IDOMRegistry domRegistry;
         try {
-            domRegistry = DOMRegistry.loadRegistry(cfgFile.getParent());
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
@@ -337,24 +364,30 @@ public class WorldTest
 
         PayloadValidator validator = new TriggerValidator();
 
+        PayloadChecker.setRunNumber(RUN_NUMBER);
+
         // set up event builder
-        ebComp = new EBComponent(true);
-        ebComp.start(false);
-        ebComp.setRunNumber(RUN_NUMBER);
-        ebComp.setDispatchDestStorage(System.getProperty("java.io.tmpdir"));
+        ebComp = new EBComponent();
+        ebComp.setValidateEvents(true);
+        ebComp.setDispatchDestStorage(DISPATCH_DEST);
         ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+        ebComp.setAlerter(new MockAlerter());
+        ebComp.initialize();
+
+        ebComp.start(false);
 
         Map<ISourceID, RequestToDataBridge> bridgeMap =
             RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
                                             ebComp.getDataReader(),
-                                            ebComp.getDataCache(),
-                                            hitList);
+                                            ebComp.getDataCache(), hitList);
 
         List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
 
         // set up global trigger
         gtComp = new GlobalTriggerComponent();
         gtComp.setGlobalConfigurationDir(cfgFile.getParent());
+        gtComp.setAlerter(new MockAlerter());
+        gtComp.initialize();
         gtComp.start(false);
 
         gtComp.configuring(cfgFile.getName());
@@ -368,6 +401,8 @@ public class WorldTest
         // set up in-ice trigger
         iiComp = new IniceTriggerComponent();
         iiComp.setGlobalConfigurationDir(cfgFile.getParent());
+        iiComp.setAlerter(new MockAlerter());
+        iiComp.initialize();
         iiComp.start(false);
 
         iiComp.configuring(cfgFile.getName());
@@ -381,63 +416,34 @@ public class WorldTest
                                               iiComp.getInputCache(),
                                               idList.size());
 
-        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null, null);
-
-        ByteBuffer simpleBuf = ByteBuffer.allocate(HitData.SIMPLE_LENGTH);
-        for (HitData hd : hitList) {
-            simpleBuf.clear();
-            hd.putSimple(simpleBuf);
-            simpleBuf.flip();
-
-            boolean written = false;
-            for (int i = 0; i < iiTails.length; i++) {
-                ISourceID srcId = idList.get(i);
-                if (srcId.getSourceID() == hd.getSourceID()) {
-                    iiTails[i].sink().write(simpleBuf);
-                    written = true;
-                    break;
-                }
-            }
-
-            if (!written) {
-                fail("Couldn't write to source " + hd.getSourceID());
-            }
-        }
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
+                                     RUN_NUMBER);
 
         ActivityMonitor activity =
-            new ActivityMonitor(iiComp, null, null, gtComp, ebComp);
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+            new ActivityMonitor(iiComp, null, gtComp, ebComp);
 
+        sendHits(idList, hitList, 0, hitList.size());
+
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
-        assertEquals("Missing in-ice trigger requests",
-                     numEvents - 1, iiComp.getPayloadsSent());
-        assertEquals("Global trigger/event mismatch",
-                     gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
+        //assertEquals("Global trigger/event mismatch",
+        //             gtComp.getPayloadsSent() - 1, ebComp.getEventsSent());
 
         DAQTestUtil.sendStops(iiTails);
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
 
-        DAQTestUtil.waitUntilStopped(iiComp.getReader(), iiComp.getSplicer(),
-                                     "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(iiComp.getWriter(), null, "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getReader(), gtComp.getSplicer(),
-                                     "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(gtComp.getWriter(), null, "GTStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getTriggerReader(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getRequestWriter(), null,
-                                     "EBStopMsg");
-        DAQTestUtil.waitUntilStopped(ebComp.getDataReader(),
-                                     ebComp.getDataSplicer(), "EBStopMsg");
-
-        while (ebComp.isBackEndRunning()) {
+        int ebRunChk = 0;
+        while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
             Thread.yield();
         }
 
-        activity.waitForStasis(10, 100, numEvents, dumpActivity, dumpSplicers);
-
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
         if (dumpBEStats) activity.dumpBackEndStats();
 
         assertEquals("Missing in-ice trigger requests",
@@ -448,10 +454,163 @@ public class WorldTest
                      numEvents, ebComp.getTriggerRequestsReceived());
         assertEquals("Missing events", numEvents, ebComp.getEventsSent());
 
-        DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, null);
+        DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);
 
-        System.err.println("XXX Ignoring extra log msgs");
-        appender.clear();
+        if (appender.getNumberOfMessages() > 0) {
+            System.err.println("XXX Ignoring extra log msgs");
+            appender.clear();
+        }
+    }
+
+    public void testSwitchRun()
+        throws DAQCompException, IOException, PayloadFormatException,
+               SplicerException, TriggerException
+    {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
+        final int numEvents = 100;
+
+        File cfgFile =
+            DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
+                                        "sps-2013-no-physminbias-001");
+
+        IDOMRegistry domRegistry;
+        try {
+            domRegistry = DOMRegistryFactory.load(cfgFile.getParent());
+        } catch (Exception ex) {
+            throw new Error("Cannot load DOM registry", ex);
+        }
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
+
+        // get list of all hits
+        List<HitData> hitList = getInIceHits(domRegistry, numEvents);
+
+        PayloadValidator validator = new TriggerValidator();
+
+        PayloadChecker.setRunNumber(RUN_NUMBER);
+
+        // set up event builder
+        ebComp = new EBComponent();
+        ebComp.setValidateEvents(true);
+        ebComp.setDispatchDestStorage(DISPATCH_DEST);
+        ebComp.setGlobalConfigurationDir(cfgFile.getParent());
+        ebComp.setAlerter(new MockAlerter());
+        ebComp.initialize();
+
+        ebComp.start(false);
+
+        Map<ISourceID, RequestToDataBridge> bridgeMap =
+            RequestToDataBridge.createLinks(ebComp.getRequestWriter(), null,
+                                            ebComp.getDataReader(),
+                                            ebComp.getDataCache(), hitList);
+
+        List<ISourceID> idList = new ArrayList<ISourceID>(bridgeMap.keySet());
+
+        // set up global trigger
+        gtComp = new GlobalTriggerComponent();
+        gtComp.setGlobalConfigurationDir(cfgFile.getParent());
+        gtComp.setAlerter(new MockAlerter());
+        gtComp.initialize();
+        gtComp.start(false);
+
+        gtComp.configuring(cfgFile.getName());
+
+        DAQTestUtil.glueComponents("GT->EB",
+                                   gtComp.getWriter(), gtComp.getOutputCache(),
+                                   validator,
+                                   ebComp.getTriggerReader(),
+                                   ebComp.getTriggerCache());
+
+        // set up in-ice trigger
+        iiComp = new IniceTriggerComponent();
+        iiComp.setGlobalConfigurationDir(cfgFile.getParent());
+        iiComp.setAlerter(new MockAlerter());
+        iiComp.initialize();
+        iiComp.start(false);
+
+        iiComp.configuring(cfgFile.getName());
+
+        DAQTestUtil.glueComponents("IIT->GT",
+                                   iiComp.getWriter(), iiComp.getOutputCache(),
+                                   validator,
+                                   gtComp.getReader(), gtComp.getInputCache());
+
+        iiTails = DAQTestUtil.connectToReader(iiComp.getReader(),
+                                              iiComp.getInputCache(),
+                                              idList.size());
+
+        DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
+                                     RUN_NUMBER);
+
+        ActivityMonitor activity =
+            new ActivityMonitor(iiComp, null, gtComp, ebComp);
+
+        final int midpoint = hitList.size() / 2;
+        sendHits(idList, hitList, 0, midpoint);
+
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        final long prevTRsRcvd = ebComp.getTriggerRequestsReceived();
+        final long prevEvtsSent = ebComp.getEventsSent();
+
+        //assertEquals("Global trigger/event mismatch",
+        //             gtComp.getPayloadsSent() - 1, prevEvtsSent);
+
+        switchToNewRun(RUN_NUMBER + 3);
+
+        sendHits(idList, hitList, midpoint, hitList.size() - midpoint);
+
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        //assertEquals("Global trigger/event mismatch",
+        //             gtComp.getPayloadsSent() - 2,
+        //             prevEvtsSent + ebComp.getEventsSent());
+
+        DAQTestUtil.sendStops(iiTails);
+
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
+
+        int ebRunChk = 0;
+        while (ebComp.isBackEndRunning() && ebRunChk++ < 10) {
+            Thread.yield();
+        }
+
+        activity.waitForStasis(10, 1000, numEvents, dumpActivity,
+                               dumpSplicers);
+        if (dumpBEStats) activity.dumpBackEndStats();
+
+        assertEquals("Missing in-ice trigger requests",
+                     numEvents + 1, iiComp.getPayloadsSent());
+        assertEquals("Missing global trigger requests",
+                     numEvents + 1, gtComp.getPayloadsSent());
+
+        final long totalTRs =
+            prevTRsRcvd + ebComp.getTriggerRequestsReceived();
+        assertTrue("Missing trigger requests in eventBuilder (got " +
+                   totalTRs + ", expected " + (numEvents - 1) + " or " +
+                   numEvents + ")",
+                   totalTRs == numEvents - 1 || totalTRs == numEvents);
+
+        assertEquals("Missing events", numEvents,
+                     prevEvtsSent + ebComp.getEventsSent());
+
+        DAQTestUtil.checkCaches(ebComp, gtComp, null, iiComp, null, false);
+        DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);
+
+        if (appender.getNumberOfMessages() > 0) {
+            System.err.println("XXX Ignoring extra log msgs");
+            appender.clear();
+        }
     }
 
     public static void main(String[] args)

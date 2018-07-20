@@ -1,5 +1,6 @@
 package icecube.daq.test;
 
+import icecube.daq.common.MockAppender;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
@@ -17,6 +18,7 @@ import icecube.daq.trigger.algorithm.AbstractTrigger;
 import icecube.daq.trigger.component.IniceTriggerComponent;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,18 +61,23 @@ public class InIceTriggerEndToEndTest
 
     private void checkLogMessages()
     {
-        for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-            String msg = (String) appender.getMessage(i);
+        try {
+            for (int i = 0; i < appender.getNumberOfMessages(); i++) {
+                String msg = (String) appender.getMessage(i);
 
-            if (!(msg.startsWith("Clearing ") &&
-                  msg.endsWith(" rope entries")) &&
-                !msg.startsWith("Resetting counter ") &&
-                !msg.startsWith("No match for timegate "))
-            {
-                fail("Bad log message#" + i + ": " + appender.getMessage(i));
+                if (!(msg.startsWith("Clearing ") &&
+                      msg.endsWith(" rope entries")) &&
+                    !msg.startsWith("Resetting counter ") &&
+                    !msg.startsWith("No match for timegate ") &&
+                    !msg.startsWith("Cannot create SNDAQ alerter"))
+                {
+                    fail("Bad log message#" + i + ": " +
+                         appender.getMessage(i));
+                }
             }
+        } finally {
+            appender.clear();
         }
-        appender.clear();
     }
 
     private void sendHit(WritableByteChannel chan, long time, int tailIndex,
@@ -104,7 +111,7 @@ public class InIceTriggerEndToEndTest
         }
     }
 
-    private void sendInIceData(Pipe[] tails, int numObjs)
+    private void sendInIceData(Pipe[] tails, int numObjs, long[] domIds)
         throws IOException
     {
         for (int i = 0; i < numObjs; i++) {
@@ -117,7 +124,8 @@ public class InIceTriggerEndToEndTest
             }
 
             final int tailIndex = i % tails.length;
-            sendHit(tails[tailIndex].sink(), time, tailIndex, 987654321L * i);
+            final long domId = domIds[i % domIds.length];
+            sendHit(tails[tailIndex].sink(), time, tailIndex, domId);
         }
     }
 
@@ -125,8 +133,6 @@ public class InIceTriggerEndToEndTest
         throws Exception
     {
         super.setUp();
-
-        appender.clear();
 
         BasicConfigurator.resetConfiguration();
         BasicConfigurator.configure(appender);
@@ -140,31 +146,53 @@ public class InIceTriggerEndToEndTest
     protected void tearDown()
         throws Exception
     {
-        assertEquals("Bad number of log messages",
-                     0, appender.getNumberOfMessages());
+        appender.assertNoLogMessages();
 
-        if (comp != null) comp.closeAll();
+        if (comp != null) {
+            try {
+                comp.closeAll();
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+        }
 
         if (tails != null) {
             DAQTestUtil.closePipeList(tails);
         }
 
+        System.clearProperty(LocatePDAQ.CONFIG_DIR_PROPERTY);
+
         super.tearDown();
     }
 
     public void testEndToEnd()
-        throws DAQCompException, IOException, SplicerException, TriggerException
+        throws DAQCompException, IOException, SplicerException,
+               TriggerException
     {
+        final boolean dumpActivity = false;
+        final boolean dumpSplicers = false;
+        final boolean dumpBEStats = false;
+
         final int numTails = 10;
         final int numObjs = numTails * 10;
 
+        final long[] domIds = new long[] {
+            0xe44c73438cb0L, 0x82d1330538caL, 0x1b955f41b088L, 0x1ae4a83e1372L,
+            0x011d29bbcdb2L, 0x3f95dd50fb33L, 0x4212834c6c88L,
+        };
+
         File cfgFile =
             DAQTestUtil.buildConfigFile(getClass().getResource("/").getPath(),
-                                        "sps-icecube-amanda-008");
+                                        "sps-2013-no-physminbias-001");
+
+        System.setProperty(LocatePDAQ.CONFIG_DIR_PROPERTY,
+                           cfgFile.getParent());
 
         // set up in-ice trigger
         comp = new IniceTriggerComponent();
+        comp.setAlerter(new MockAlerter());
         comp.setGlobalConfigurationDir(cfgFile.getParent());
+        comp.initialize();
         comp.start(false);
 
         comp.configuring(cfgFile.getName());
@@ -176,29 +204,33 @@ public class InIceTriggerEndToEndTest
         DAQTestUtil.connectToSink("iiOut", comp.getWriter(),
                                   comp.getOutputCache(), validator);
 
-        DAQTestUtil.startComponentIO(null, null, null, comp, null, null);
+        final int runNum = 12345;
+
+        DAQTestUtil.startComponentIO(null, null, null, comp, null, runNum);
+
+        ActivityMonitor activity =
+            new ActivityMonitor(comp, null, null, null);
 
         // load data into input channels
-        sendInIceData(tails, numObjs);
+        sendInIceData(tails, numObjs, domIds);
+
+        final int expTriggers = numObjs / NUM_HITS_PER_TRIGGER;
+
+        activity.waitForStasis(10, 1000, expTriggers, dumpActivity,
+                               dumpSplicers);
+
         DAQTestUtil.sendStops(tails);
 
-        DAQTestUtil.waitUntilStopped(comp.getReader(), comp.getSplicer(),
-                                     "IIStopMsg");
-        DAQTestUtil.waitUntilStopped(comp.getWriter(), null, "IIStopMsg");
+        activity.waitForStasis(10, 1000, expTriggers, dumpActivity,
+                               dumpSplicers);
 
         assertEquals("Bad number of payloads written",
-                     numObjs / NUM_HITS_PER_TRIGGER,
-                     comp.getPayloadsSent() - 1);
-
-        IByteBufferCache inCache = comp.getInputCache();
-        assertTrue("Input buffer cache is unbalanced (" + inCache + ")",
-                   inCache.isBalanced());
-
-        IByteBufferCache outCache = comp.getOutputCache();
-        assertTrue("Output buffer cache is unbalanced (" + outCache + ")",
-                   outCache.isBalanced());
+                     expTriggers, comp.getPayloadsSent() - 1);
 
         assertFalse("Found invalid payload(s)", validator.foundInvalid());
+
+        DAQTestUtil.checkCaches(null, null, null, comp, null);
+        DAQTestUtil.destroyComponentIO(null, null, null, comp, null);
 
         if (appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
             appender.clear();

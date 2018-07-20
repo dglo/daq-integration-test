@@ -2,12 +2,13 @@ package icecube.daq.test;
 
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.Dispatcher;
+import icecube.daq.io.StreamMetaData;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IEventPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
-import icecube.daq.payload.PayloadException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -61,7 +62,7 @@ public class MockDispatcher
         }
     }
 
-    public void dispatchEvent(ByteBuffer buf)
+    public void dispatchEvent(ByteBuffer buf, long ticks)
         throws DispatchException
     {
         throw new Error("Unimplemented");
@@ -81,15 +82,15 @@ public class MockDispatcher
         }
 
         if (readOnly) {
-            throw new DispatchException("Could not dispatch event",
-                                        new IOException("Read-only file system"));
+            IOException ioe = new IOException("Read-only file system");
+            throw new DispatchException("Could not dispatch event", ioe);
         }
 
         ByteBuffer buf;
         if (bufMgr == null) {
-            buf = ByteBuffer.allocate(pay.getPayloadLength());
+            buf = ByteBuffer.allocate(pay.length());
         } else {
-            buf = bufMgr.acquireBuffer(pay.getPayloadLength());
+            buf = bufMgr.acquireBuffer(pay.length());
         }
 
         try {
@@ -98,27 +99,11 @@ public class MockDispatcher
             System.err.println("Couldn't write payload " + pay);
             ioe.printStackTrace();
             buf = null;
-        } catch (PayloadException pe) {
-            System.err.println("Couldn't write payload " + pay);
-            pe.printStackTrace();
-            buf = null;
         }
 
         if (bufMgr != null && buf != null) {
             bufMgr.returnBuffer(buf);
         }
-    }
-
-    public void dispatchEvents(ByteBuffer buf, int[] il1)
-        throws DispatchException
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void dispatchEvents(ByteBuffer buf, int[] il1, int i2)
-        throws DispatchException
-    {
-        throw new Error("Unimplemented");
     }
 
     /**
@@ -131,6 +116,11 @@ public class MockDispatcher
         return bufMgr;
     }
 
+    public File getDispatchDestStorage()
+    {
+        throw new Error("Unimplemented");
+    }
+
     public long getDiskAvailable()
     {
         return 0;
@@ -141,14 +131,34 @@ public class MockDispatcher
         return 0;
     }
 
+    public long getFirstDispatchedTime()
+    {
+        return Long.MIN_VALUE;
+    }
+
+    public StreamMetaData getMetaData()
+    {
+        return new StreamMetaData(0L, 0L);
+    }
+
     public long getNumBytesWritten()
     {
-	return 0;
+        return 0;
+    }
+
+    public long getNumDispatchedEvents()
+    {
+        return numSeen;
     }
 
     public int getNumberOfBadEvents()
     {
         return numBad;
+    }
+
+    public int getRunNumber()
+    {
+        throw new Error("Unimplemented");
     }
 
     public long getTotalDispatchedEvents()
@@ -179,7 +189,8 @@ public class MockDispatcher
     /**
      * Trigger a read-only filesystem event after <tt>eventCount</tt> events.
      *
-     * @param eventCount number of events needed to trigger a read-only filesystem
+     * @param eventCount number of events needed to trigger a read-only
+     *                   filesystem
      */
     public void setReadOnlyTrigger(int eventCount)
     {

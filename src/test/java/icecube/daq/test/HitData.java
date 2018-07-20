@@ -54,7 +54,7 @@ public class HitData
         this.domId = domId;
         this.trigMode = trigMode;
 
-        chanId = domRegistry.getChannelId(DOMID.toString(domId));
+        chanId = domRegistry.getChannelId(domId);
         if (chanId < 0) {
             throw new Error("Couldn't find channel ID for DOM " +
                             DOMID.toString(domId));
