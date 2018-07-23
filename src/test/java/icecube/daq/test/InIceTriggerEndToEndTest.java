@@ -69,8 +69,7 @@ public class InIceTriggerEndToEndTest
                       msg.endsWith(" rope entries")) &&
                     !msg.startsWith("Resetting counter ") &&
                     !msg.startsWith("No match for timegate ") &&
-                    !msg.startsWith("Cannot create SNDAQ alerter") &&
-                    !msg.startsWith("Using buggy SMT algorithm"))
+                    !msg.startsWith("Cannot create SNDAQ alerter"))
                 {
                     fail("Bad log message#" + i + ": " +
                          appender.getMessage(i));
