@@ -92,6 +92,11 @@ public class EventBuilderEndToEndTest
             for (int i = 0; i < appender.getNumberOfMessages(); i++) {
                 String msg = (String) appender.getMessage(i);
 
+                if (msg.startsWith("clearCache() called for ")) {
+                    System.err.println(msg);
+                    continue;
+                }
+
                 if (!(msg.startsWith("Clearing ") &&
                       msg.endsWith(" rope entries")) &&
                     !msg.startsWith("Resetting counter ") &&

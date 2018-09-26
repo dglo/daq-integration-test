@@ -598,10 +598,17 @@ public class WorldTest
 
         final long totalTRs =
             prevTRsRcvd + ebComp.getTriggerRequestsReceived();
-        assertTrue("Missing trigger requests in eventBuilder (got " +
+
+        final String descr;
+        if (totalTRs > numEvents) {
+            descr = "Extra";
+        } else {
+            descr = "Missing";
+        }
+        assertTrue(descr + " trigger requests in eventBuilder (got " +
                    totalTRs + ", expected " + (numEvents - 1) + " or " +
                    numEvents + ")",
-                   totalTRs == numEvents - 1 || totalTRs == numEvents);
+                   totalTRs == numEvents || totalTRs == numEvents + 1);
 
         assertEquals("Missing events", numEvents,
                      prevEvtsSent + ebComp.getEventsSent());
