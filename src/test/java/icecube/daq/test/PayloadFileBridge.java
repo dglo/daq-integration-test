@@ -41,6 +41,7 @@ public class PayloadFileBridge
         this.chanOut = chanOut;
     }
 
+    @Override
     ByteBuffer buildStopMessage(ByteBuffer stopBuf)
     {
         if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
@@ -55,6 +56,7 @@ public class PayloadFileBridge
         return stopBuf;
     }
 
+    @Override
     void finishThreadCleanup()
     {
         try {
@@ -66,6 +68,7 @@ public class PayloadFileBridge
         chanOut = null;
     }
 
+    @Override
     boolean isStopMessage(ByteBuffer buf)
     {
         return buf.limit() == STOP_MESSAGE_LENGTH &&
@@ -84,6 +87,7 @@ public class PayloadFileBridge
         writeDelay = msecSleep;
     }
 
+    @Override
     void write(ByteBuffer buf)
         throws IOException
     {

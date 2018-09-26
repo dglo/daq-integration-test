@@ -19,6 +19,7 @@ public abstract class BaseValidator
     private boolean foundInvalid;
     private PayloadFactory factory;
 
+    @Override
     public boolean foundInvalid()
     {
         return foundInvalid;
@@ -61,6 +62,7 @@ public abstract class BaseValidator
         System.err.println("LEN "+len+" HEX "+strbuf.toString());
     }
 
+    @Override
     public boolean validate(ByteBuffer payBuf)
     {
         // assume stop messages are valid

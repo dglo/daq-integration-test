@@ -194,6 +194,7 @@ public class HitData
     static void setDefaultConfigId(int val) { defaultCfgId = val; }
     static void setDefaultTriggerMode(int val) { defaultTrigMode = val; }
 
+    @Override
     public String toString()
     {
         return "HitData[" + time + " cfg " + cfgId + " src " + srcId +

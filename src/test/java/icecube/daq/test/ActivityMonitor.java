@@ -48,6 +48,7 @@ class AlgorithmData
         sent = val;
     }
 
+    @Override
     public String toString()
     {
         return String.format("%d->%d->%d", queuedIn, queuedOut, sent);
@@ -84,6 +85,7 @@ class TriggerMonitor
         this.prefix = prefix;
     }
 
+    @Override
     public boolean check()
     {
         if (stopped != summarized) {
@@ -159,6 +161,7 @@ class TriggerMonitor
         return changed;
     }
 
+    @Override
     public String getPrefix()
     {
         return prefix;
@@ -169,16 +172,19 @@ class TriggerMonitor
         return sent;
     }
 
+    @Override
     public Splicer getSplicer()
     {
         return comp.getSplicer();
     }
 
+    @Override
     public boolean isStopped()
     {
         return stopped;
     }
 
+    @Override
     public String toString()
     {
         if (comp == null) {
@@ -228,6 +234,7 @@ class EventBuilderMonitor
         this.prefix = prefix;
     }
 
+    @Override
     public boolean check()
     {
         if (stopped != summarized) {
@@ -318,6 +325,7 @@ class EventBuilderMonitor
         if (buf.length() > 0) System.err.println("** BackEnd: " + buf);
     }
 
+    @Override
     public String getPrefix()
     {
         return prefix;
@@ -328,16 +336,19 @@ class EventBuilderMonitor
         return evtsSent;
     }
 
+    @Override
     public Splicer getSplicer()
     {
         return comp.getDataSplicer();
     }
 
+    @Override
     public boolean isStopped()
     {
         return stopped;
     }
 
+    @Override
     public String toString()
     {
         if (comp == null) {

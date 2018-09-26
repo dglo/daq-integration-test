@@ -14,22 +14,26 @@ public class PayloadSink
         super(name, chanIn);
     }
 
+    @Override
     ByteBuffer buildStopMessage(ByteBuffer stopBuf)
     {
         return null;
     }
 
+    @Override
     boolean isStopMessage(ByteBuffer buf)
     {
         return buf.limit() == STOP_MESSAGE_LENGTH &&
             buf.getInt(0) == STOP_MESSAGE_LENGTH;
     }
 
+    @Override
     void finishThreadCleanup()
     {
         // do nothing
     }
 
+    @Override
     void write(ByteBuffer buf)
         throws IOException
     {

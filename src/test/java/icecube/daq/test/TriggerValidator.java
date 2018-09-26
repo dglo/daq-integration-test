@@ -12,6 +12,7 @@ class TriggerValidator
 {
     private static final Log LOG = LogFactory.getLog(TriggerValidator.class);
 
+    @Override
     public boolean validate(IWriteablePayload payload)
     {
         if (!(payload instanceof ITriggerRequestPayload)) {

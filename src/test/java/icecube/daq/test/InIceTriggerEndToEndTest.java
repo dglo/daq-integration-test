@@ -131,6 +131,7 @@ public class InIceTriggerEndToEndTest
         }
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -145,6 +146,7 @@ public class InIceTriggerEndToEndTest
         return new TestSuite(InIceTriggerEndToEndTest.class);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {
@@ -266,6 +268,7 @@ public class InIceTriggerEndToEndTest
             nextEnd = nextStart + timeSpan;
         }
 
+        @Override
         public boolean validate(IWriteablePayload payload)
         {
             if (!(payload instanceof ITriggerRequestPayload)) {

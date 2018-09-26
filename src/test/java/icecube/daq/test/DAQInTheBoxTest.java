@@ -613,6 +613,7 @@ public class DAQInTheBoxTest
         return list;
     }
 
+    @Override
     int getNumberOfExpectedEvents()
     {
         return 509;
@@ -633,6 +634,7 @@ public class DAQInTheBoxTest
         return new ArrayList(map.keySet());
     }
 
+    @Override
     void initialize(IDOMRegistry domRegistry)
     {
         hitList = getInIceHits(domRegistry);
@@ -640,6 +642,7 @@ public class DAQInTheBoxTest
         idList = getSourceIds(hitList);
     }
 
+    @Override
     void sendData(StringHubComponent[] shComps) throws IOException
     {
         for (HitData hd : hitList) {

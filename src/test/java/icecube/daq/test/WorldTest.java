@@ -275,6 +275,7 @@ public class WorldTest
         }
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -302,6 +303,7 @@ public class WorldTest
         PayloadChecker.setRunNumber(runNum);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {

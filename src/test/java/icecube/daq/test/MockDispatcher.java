@@ -32,18 +32,21 @@ public class MockDispatcher
         this.bufMgr = bufMgr;
     }
 
+    @Override
     public void close()
         throws DispatchException
     {
         // do nothing
     }
 
+    @Override
     public void dataBoundary()
         throws DispatchException
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void dataBoundary(String msg)
         throws DispatchException
     {
@@ -68,6 +71,7 @@ public class MockDispatcher
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void dispatchEvent(IWriteablePayload pay)
         throws DispatchException
     {
@@ -111,41 +115,49 @@ public class MockDispatcher
      *
      * @return byte buffer cache
      */
+    @Override
     public IByteBufferCache getByteBufferCache()
     {
         return bufMgr;
     }
 
+    @Override
     public long getDiskAvailable()
     {
         return 0;
     }
 
+    @Override
     public long getDiskSize()
     {
         return 0;
     }
 
+    @Override
     public File getDispatchDestStorage()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public long getFirstDispatchedTime()
     {
         return Long.MIN_VALUE;
     }
 
+    @Override
     public StreamMetaData getMetaData()
     {
         return new StreamMetaData(0L, 0L);
     }
 
+    @Override
     public long getNumBytesWritten()
     {
         return 0;
     }
 
+    @Override
     public long getNumDispatchedEvents()
     {
         return numSeen;
@@ -156,26 +168,31 @@ public class MockDispatcher
         return numBad;
     }
 
+    @Override
     public int getRunNumber()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public long getTotalDispatchedEvents()
     {
         return numSeen;
     }
 
+    @Override
     public boolean isStarted()
     {
         return started;
     }
 
+    @Override
     public void setDispatchDestStorage(String destDir)
     {
         // do nothing
     }
 
+    @Override
     public void setMaxFileSize(long x0)
     {
         throw new Error("Unimplemented");
@@ -197,6 +214,7 @@ public class MockDispatcher
         this.readOnlyTrigger = eventCount;
     }
 
+    @Override
     public String toString()
     {
         if (numBad == 0) {

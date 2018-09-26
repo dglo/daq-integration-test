@@ -365,6 +365,7 @@ public abstract class DAQTestCase
         appender.setLevel(level);
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -389,6 +390,7 @@ public abstract class DAQTestCase
         ebComp.switching(runNum);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {

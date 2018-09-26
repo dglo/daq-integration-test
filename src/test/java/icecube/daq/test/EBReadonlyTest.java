@@ -745,6 +745,7 @@ public class EBReadonlyTest
         }
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -761,6 +762,7 @@ public class EBReadonlyTest
         return new TestSuite(EBReadonlyTest.class);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {

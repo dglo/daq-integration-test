@@ -34,6 +34,7 @@ public class DomHitFileBridge
      *
      * @return stop message
      */
+    @Override
     ByteBuffer buildStopMessage(ByteBuffer stopBuf)
     {
         if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
@@ -49,10 +50,12 @@ public class DomHitFileBridge
         return stopBuf;
     }
 
+    @Override
     void finishThreadCleanup()
     {
     }
 
+    @Override
     boolean isStopMessage(ByteBuffer buf)
     {
         return buf.limit() == STOP_MESSAGE_LENGTH &&
@@ -70,6 +73,7 @@ public class DomHitFileBridge
         return hitOut.getRecordsSent();
     }
 
+    @Override
     void write(ByteBuffer buf) throws IOException
     {
         // don't overwhelm other threads

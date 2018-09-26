@@ -15,6 +15,7 @@ class GlobalTriggerValidator
     private long prevFirstTime = Long.MIN_VALUE;
     private long prevLastTime = Long.MIN_VALUE;
 
+    @Override
     boolean validateTrigger(ITriggerRequestPayload tr)
     {
         super.validateTrigger(tr);

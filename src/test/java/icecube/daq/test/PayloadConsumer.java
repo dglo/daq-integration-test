@@ -44,6 +44,7 @@ public abstract class PayloadConsumer
 
     abstract boolean isStopMessage(ByteBuffer buf);
 
+    @Override
     public void run()
     {
         ByteBuffer lenBuf = ByteBuffer.allocate(4);
@@ -157,6 +158,7 @@ public abstract class PayloadConsumer
     abstract void write(ByteBuffer buf)
         throws IOException;
 
+    @Override
     public String toString()
     {
         return inputName + "#" + numWritten + (isRunning() ? "" : "(stopped)");

@@ -181,6 +181,7 @@ public class GlobalTriggerPhysicsDataTest
         }
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -195,6 +196,7 @@ public class GlobalTriggerPhysicsDataTest
         return new TestSuite(GlobalTriggerPhysicsDataTest.class);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {
@@ -361,6 +363,7 @@ public class GlobalTriggerPhysicsDataTest
             this.cmpOp = cmpOp;
         }
 
+        @Override
         public int compare(Object a, Object b)
         {
             ITriggerRequestPayload aTrig = (ITriggerRequestPayload) a;
@@ -451,6 +454,7 @@ public class GlobalTriggerPhysicsDataTest
             return cmp;
         }
 
+        @Override
         public boolean equals(Object obj)
         {
             return obj.getClass().getName().equals(getClass().getName());
@@ -492,6 +496,7 @@ public class GlobalTriggerPhysicsDataTest
             return thread != null;
         }
 
+        @Override
         public void run()
         {
             ByteBuffer buf = null;
@@ -571,6 +576,7 @@ public class GlobalTriggerPhysicsDataTest
             }
         }
 
+        @Override
         ByteBuffer buildStopMessage(ByteBuffer stopBuf)
         {
             if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
@@ -585,6 +591,7 @@ public class GlobalTriggerPhysicsDataTest
             return stopBuf;
         }
 
+        @Override
         void finishThreadCleanup()
         {
             try {
@@ -596,6 +603,7 @@ public class GlobalTriggerPhysicsDataTest
             chanOut = null;
         }
 
+        @Override
         IWriteablePayload getNextPayload()
         {
             if (iter == null) {
@@ -609,6 +617,7 @@ public class GlobalTriggerPhysicsDataTest
             return iter.next();
         }
 
+        @Override
         void write(ByteBuffer buf)
             throws IOException
         {

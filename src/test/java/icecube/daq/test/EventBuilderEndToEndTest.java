@@ -251,6 +251,7 @@ public class EventBuilderEndToEndTest
         }
     }
 
+    @Override
     protected void setUp()
         throws Exception
     {
@@ -283,6 +284,7 @@ public class EventBuilderEndToEndTest
         comp.switching(runNum);
     }
 
+    @Override
     protected void tearDown()
         throws Exception
     {

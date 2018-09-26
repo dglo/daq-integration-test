@@ -69,11 +69,13 @@ public class DAQInTheFileTest
         return shComps;
     }
 
+    @Override
     int getNumberOfExpectedEvents()
     {
         return 509;
     }
 
+    @Override
     void initialize(IDOMRegistry domRegistry)
     {
         final String rawDataName = "raw_data";
@@ -196,6 +198,7 @@ public class DAQInTheFileTest
         }
     }
 
+    @Override
     void sendData(StringHubComponent[] shComps)
     {
         for (int i = 0; i < shInput.length; i++) {
