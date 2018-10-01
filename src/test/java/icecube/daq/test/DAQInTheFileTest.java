@@ -1,7 +1,6 @@
 package icecube.daq.test;
 
 import icecube.daq.io.PayloadFileReader;
-import icecube.daq.io.PayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;

@@ -2,7 +2,6 @@ package icecube.daq.test;
 
 import icecube.daq.common.MockAppender;
 import icecube.daq.io.DAQComponentIOProcess;
-import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ITriggerRequestPayload;

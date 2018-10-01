@@ -3,7 +3,7 @@ package icecube.daq.test;
 import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.DAQComponentOutputProcess;
-import icecube.daq.io.PayloadReader;
+import icecube.daq.io.DAQStreamReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.payload.IByteBufferCache;
@@ -336,7 +336,7 @@ public final class DAQTestUtil
         return consumer;
     }
 
-    public static Pipe connectToReader(PayloadReader rdr,
+    public static Pipe connectToReader(DAQStreamReader rdr,
                                        IByteBufferCache cache)
         throws IOException
     {
@@ -355,7 +355,7 @@ public final class DAQTestUtil
         return testPipe;
     }
 
-    public static Pipe[] connectToReader(PayloadReader rdr,
+    public static Pipe[] connectToReader(DAQStreamReader rdr,
                                          IByteBufferCache cache,
                                          int numTails)
         throws IOException
@@ -406,7 +406,7 @@ public final class DAQTestUtil
                                       DAQComponentOutputProcess out,
                                       IByteBufferCache outCache,
                                       PayloadValidator validator,
-                                      PayloadReader in,
+                                      DAQStreamReader in,
                                       IByteBufferCache inCache)
         throws IOException
     {
@@ -450,7 +450,7 @@ public final class DAQTestUtil
         bridge.start();
     }
 
-    public static void initReader(PayloadReader rdr, Splicer splicer,
+    public static void initReader(DAQStreamReader rdr, Splicer splicer,
                                    String rdrName)
     {
         rdr.start();

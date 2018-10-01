@@ -5,7 +5,7 @@ import icecube.daq.eventBuilder.EBComponent;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
 import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.io.DAQSourceIdOutputProcess;
-import icecube.daq.io.PayloadReader;
+import icecube.daq.io.DAQStreamReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
 import icecube.daq.juggler.component.IComponent;
@@ -114,7 +114,7 @@ public abstract class DAQTestCase
                 continue;
             }
 
-            PayloadReader hitRdr = trigComp.getReader();
+            DAQStreamReader hitRdr = trigComp.getReader();
             IByteBufferCache cache = trigComp.getInputCache();
 
             for (int i = 0; i < shComps.length; i++) {
@@ -141,7 +141,7 @@ public abstract class DAQTestCase
         // connect EB req to SH
         DAQSourceIdOutputProcess dest = ebComp.getRequestWriter();
         for (int i = 0; i < shComps.length; i++) {
-            PayloadReader rdr = shComps[i].getRequestReader();
+            DAQStreamReader rdr = shComps[i].getRequestReader();
             Pipe pipe =
                 DAQTestUtil.connectToReader(rdr, shComps[i].getCache());
             ((SelectableChannel) pipe.sink()).configureBlocking(false);
@@ -152,7 +152,7 @@ public abstract class DAQTestCase
         }
 
         // connect SH data to EB
-        PayloadReader dataRdr = ebComp.getDataReader();
+        DAQStreamReader dataRdr = ebComp.getDataReader();
         for (int i = 0; i < shComps.length; i++) {
             int hubNum = shComps[i].getHubId() % 100;
             IByteBufferCache dataCache =
@@ -180,8 +180,8 @@ public abstract class DAQTestCase
         long prevSent = 0;
         int numTries = 0;
 
-        PayloadReader gtRdr = comp.getTriggerReader();
-        PayloadReader rdoutRdr = comp.getDataReader();
+        DAQStreamReader gtRdr = comp.getTriggerReader();
+        DAQStreamReader rdoutRdr = comp.getDataReader();
         MonitoringData monData = comp.getMonitoringData();
 
         while (numTries < maxTries) {
@@ -239,7 +239,7 @@ public abstract class DAQTestCase
 
         DAQComponentOutputProcess dataOut = shComp.getDataWriter();
         DAQComponentOutputProcess hitOut = shComp.getHitWriter();
-        PayloadReader reqRdr = shComp.getRequestReader();
+        DAQStreamReader reqRdr = shComp.getRequestReader();
         SenderMXBean sender = shComp.getSenderMonitor();
 
         while (numTries < maxTries) {
@@ -309,7 +309,7 @@ public abstract class DAQTestCase
         long prevSent = 0;
         int numTries = 0;
 
-        PayloadReader reader = comp.getReader();
+        DAQStreamReader reader = comp.getReader();
         ITriggerManager trigMgr = comp.getTriggerManager();
         DAQComponentOutputProcess writer = comp.getWriter();
 

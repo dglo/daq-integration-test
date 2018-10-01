@@ -2,7 +2,7 @@ package icecube.daq.test;
 
 import icecube.daq.common.EventVersion;
 import icecube.daq.io.DAQSourceIdOutputProcess;
-import icecube.daq.io.PayloadReader;
+import icecube.daq.io.DAQStreamReader;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ILoadablePayload;
@@ -53,7 +53,7 @@ public class RequestToDataBridge
 
     public static Map<ISourceID, RequestToDataBridge>
         createLinks(DAQSourceIdOutputProcess reqOut,
-                    PayloadValidator validator, PayloadReader dataIn,
+                    PayloadValidator validator, DAQStreamReader dataIn,
                     IByteBufferCache dataCache, List<HitData> hitList)
         throws IOException
     {

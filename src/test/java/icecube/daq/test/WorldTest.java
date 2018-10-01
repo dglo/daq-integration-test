@@ -6,7 +6,6 @@ import icecube.daq.eventBuilder.GlobalTriggerReader;
 import icecube.daq.eventBuilder.SPDataAnalysis;
 import icecube.daq.eventBuilder.backend.EventBuilderBackEnd;
 import icecube.daq.eventBuilder.monitoring.MonitoringData;
-import icecube.daq.io.SpliceablePayloadReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
