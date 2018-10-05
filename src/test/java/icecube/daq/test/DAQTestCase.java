@@ -131,7 +131,8 @@ public abstract class DAQTestCase
 
                     DAQComponentOutputProcess outProc =
                         shComps[i].getHitWriter();
-                    outProc.addDataChannel(pipe.sink(), shComps[i].getCache());
+                    outProc.addDataChannel(pipe.sink(), shComps[i].getCache(),
+                                           "hub#" + srcId);
 
                     pipeList.add(pipe);
                 }

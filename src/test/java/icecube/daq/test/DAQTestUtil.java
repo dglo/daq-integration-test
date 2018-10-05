@@ -323,7 +323,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name, srcOut));
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache);
+        out.addDataChannel(sinkOut, outCache, "Sink");
 
         if (startOut) {
             startIOProcess(out);
@@ -423,7 +423,7 @@ public final class DAQTestUtil
         chanData.add(new ChannelData(name + "*OUT", srcOut));
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache);
+        out.addDataChannel(sinkOut, outCache, name + "*GLUE");
 
         if (startOut) {
             startIOProcess(out);
