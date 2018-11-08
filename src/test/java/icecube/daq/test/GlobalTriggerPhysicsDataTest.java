@@ -36,8 +36,7 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 import org.apache.log4j.BasicConfigurator;
 
@@ -463,7 +462,7 @@ public class GlobalTriggerPhysicsDataTest
     abstract class PayloadProducer
         implements Runnable
     {
-        private Log LOG = LogFactory.getLog(PayloadProducer.class);
+        private Logger LOG = Logger.getLogger(PayloadProducer.class);
 
         private String name;
         private Thread thread;
@@ -552,7 +551,7 @@ public class GlobalTriggerPhysicsDataTest
     class TriggerProducer
         extends PayloadProducer
     {
-        private Log LOG = LogFactory.getLog(TriggerProducer.class);
+        private Logger LOG = Logger.getLogger(TriggerProducer.class);
 
         private static final int STOP_MESSAGE_LENGTH = 4;
 

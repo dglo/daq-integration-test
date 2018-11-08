@@ -3,13 +3,12 @@ package icecube.daq.test;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 class GeneralValidator
     extends BaseValidator
 {
-    private static final Log LOG = LogFactory.getLog(GeneralValidator.class);
+    private static final Logger LOG = Logger.getLogger(GeneralValidator.class);
 
     @Override
     public boolean validate(IWriteablePayload payload)

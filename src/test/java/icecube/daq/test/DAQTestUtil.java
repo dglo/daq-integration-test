@@ -26,12 +26,11 @@ import java.util.ArrayList;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 class ChannelData
 {
-    private static final Log LOG = LogFactory.getLog(ChannelData.class);
+    private static final Logger LOG = Logger.getLogger(ChannelData.class);
 
     private String name;
     private java.nio.channels.Channel chan;

@@ -8,13 +8,12 @@ import icecube.daq.payload.IWriteablePayload;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 public abstract class BaseValidator
     implements PayloadValidator
 {
-    private static final Log LOG = LogFactory.getLog(BaseValidator.class);
+    private static final Logger LOG = Logger.getLogger(BaseValidator.class);
 
     private boolean foundInvalid;
     private PayloadFactory factory;

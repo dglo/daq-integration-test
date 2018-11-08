@@ -4,13 +4,12 @@ import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 class TriggerValidator
     extends BaseValidator
 {
-    private static final Log LOG = LogFactory.getLog(TriggerValidator.class);
+    private static final Logger LOG = Logger.getLogger(TriggerValidator.class);
 
     @Override
     public boolean validate(IWriteablePayload payload)

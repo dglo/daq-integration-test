@@ -23,13 +23,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 public class RequestToDataBridge
     extends PayloadFileBridge
 {
-    private static final Log LOG = LogFactory.getLog(RequestToDataBridge.class);
+    private static final Logger LOG = Logger.getLogger(RequestToDataBridge.class);
 
     private static short nextNum;
 

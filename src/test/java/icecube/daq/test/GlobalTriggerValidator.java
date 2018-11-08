@@ -3,13 +3,12 @@ package icecube.daq.test;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.IUTCTime;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 class GlobalTriggerValidator
     extends TriggerValidator
 {
-    private Log LOG = LogFactory.getLog(GlobalTriggerValidator.class);
+    private Logger LOG = Logger.getLogger(GlobalTriggerValidator.class);
 
     private int prevUID;
     private long prevFirstTime = Long.MIN_VALUE;
