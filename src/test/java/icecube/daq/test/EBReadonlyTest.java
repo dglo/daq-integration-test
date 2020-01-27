@@ -15,6 +15,7 @@ import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
+import icecube.daq.payload.impl.SimpleHit;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
 import icecube.daq.payload.impl.VitreousBufferCache;
@@ -829,6 +830,9 @@ public class EBReadonlyTest
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }
+
+        // set class-level DOM registry so channel ID can be used
+        SimpleHit.setDOMRegistry(domRegistry);
 
         // get list of all hits
         List<HitData> hitList = getInIceHits(domRegistry);
