@@ -335,7 +335,13 @@ public class GlobalTriggerPhysicsDataTest
         try {
             if (!appender.getLevel().equals(org.apache.log4j.Level.ALL)) {
                 for (int i = 0; i < appender.getNumberOfMessages(); i++) {
-                    appender.assertLogMessage("Resetting counter ");
+                    final String msg = (String) appender.getMessage(i);
+                    if (!msg.startsWith("Resetting counter ") &&
+                        !msg.startsWith("Earliest time went "))
+                    {
+                        fail("Bad log message#" + i + ": " +
+                             appender.getMessage(i));
+                    }
                 }
             }
         } finally {
