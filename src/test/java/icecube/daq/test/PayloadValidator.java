@@ -1,6 +1,6 @@
 package icecube.daq.test;
 
-import icecube.daq.payload.IWriteablePayload;
+import icecube.daq.payload.IPayload;
 
 import java.nio.ByteBuffer;
 
@@ -8,5 +8,5 @@ public interface PayloadValidator
 {
     boolean foundInvalid();
     boolean validate(ByteBuffer payBuf);
-    boolean validate(IWriteablePayload payload);
+    boolean validate(IPayload payload);
 }

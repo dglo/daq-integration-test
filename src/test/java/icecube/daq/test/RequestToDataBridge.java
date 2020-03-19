@@ -5,11 +5,10 @@ import icecube.daq.io.DAQSourceIdOutputProcess;
 import icecube.daq.io.DAQStreamReader;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ISourceID;
-import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.PayloadRegistry;
 
@@ -333,7 +332,7 @@ public class RequestToDataBridge
                 factory = new PayloadFactory(null);
             }
 
-            IWriteablePayload payload;
+            IPayload payload;
             try {
                 payload = factory.getPayload(buf, 0);
                 if (payload == null) {
@@ -347,7 +346,7 @@ public class RequestToDataBridge
 
             if (payload != null) {
                 try {
-                    ((ILoadablePayload) payload).loadPayload();
+                    ((IPayload) payload).loadPayload();
                 } catch (Exception ex) {
                     LOG.error("Couldn't load payload", ex);
                     payload = null;

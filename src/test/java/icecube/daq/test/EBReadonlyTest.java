@@ -11,7 +11,6 @@ import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
 import icecube.daq.payload.IUTCTime;
-import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 import icecube.daq.payload.PayloadFormatException;
 import icecube.daq.payload.PayloadRegistry;
@@ -943,7 +942,7 @@ public class EBReadonlyTest
 
 /*
         assertTrue("GTOutCache does not have a backlog",
-                   gtComp.getOutputCache().getCurrentAquiredBuffers() > 0);
+                   gtComp.getOutputCache().getCurrentAcquiredBuffers() > 0);
 */
 
         DAQTestUtil.destroyComponentIO(ebComp, gtComp, null, iiComp, null);

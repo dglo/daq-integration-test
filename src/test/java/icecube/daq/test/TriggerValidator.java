@@ -1,7 +1,7 @@
 package icecube.daq.test;
 
+import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
-import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadChecker;
 
 import org.apache.log4j.Logger;
@@ -12,7 +12,7 @@ class TriggerValidator
     private static final Logger LOG = Logger.getLogger(TriggerValidator.class);
 
     @Override
-    public boolean validate(IWriteablePayload payload)
+    public boolean validate(IPayload payload)
     {
         if (!(payload instanceof ITriggerRequestPayload)) {
             throw new Error("Unexpected payload " +

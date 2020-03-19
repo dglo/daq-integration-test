@@ -4,7 +4,6 @@ import icecube.daq.io.PayloadFileReader;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.ISourceID;
-import icecube.daq.payload.IWriteablePayload;
 import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.VitreousBufferCache;
