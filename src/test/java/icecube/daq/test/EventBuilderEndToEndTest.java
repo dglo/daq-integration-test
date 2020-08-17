@@ -12,6 +12,7 @@ import icecube.daq.io.Dispatcher;
 import icecube.daq.io.FileDispatcher;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.component.DAQConnector;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.IReadoutRequestElement;
@@ -353,7 +354,8 @@ public class EventBuilderEndToEndTest
                                         comp.getDataReader(),
                                         comp.getDataCache(), hitList);
 
-        DAQTestUtil.startComponentIO(comp, null, null, null, null, RUN_NUMBER);
+        DAQTestUtil.startComponentIO(comp, null, null, null, null, RUN_NUMBER,
+                                     IComponent.DOMMODE_NORMAL);
 
         sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP, NUM_TRIGGERS);
 
@@ -418,7 +420,7 @@ public class EventBuilderEndToEndTest
                                         comp.getDataCache(), hitList);
 
         DAQTestUtil.startComponentIO(comp, null, null, null, null,
-                                     RUN_NUMBER);
+                                     RUN_NUMBER, IComponent.DOMMODE_NORMAL);
 
         long curTime = sendGlobalTriggers(gtPipe.sink(), TIME_BASE, TRIG_STEP,
                                           NUM_TRIGGERS / 2);

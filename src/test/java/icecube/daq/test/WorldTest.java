@@ -417,7 +417,7 @@ public class WorldTest
                                               idList.size());
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
-                                     RUN_NUMBER);
+                                     RUN_NUMBER, IComponent.DOMMODE_NORMAL);
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, gtComp, ebComp);
@@ -545,7 +545,7 @@ public class WorldTest
                                               idList.size());
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
-                                     RUN_NUMBER);
+                                     RUN_NUMBER, IComponent.DOMMODE_NORMAL);
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, gtComp, ebComp);

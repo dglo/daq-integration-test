@@ -896,7 +896,7 @@ public class EBReadonlyTest
                                               idList.size());
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, null, iiComp, null,
-                                     RUN_NUMBER);
+                                     RUN_NUMBER, IComponent.DOMMODE_NORMAL);
 
         ActivityMonitor activity =
             new ActivityMonitor(iiComp, null, gtComp, ebComp);

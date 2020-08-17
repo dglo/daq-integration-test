@@ -3,6 +3,7 @@ package icecube.daq.test;
 import icecube.daq.common.MockAppender;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
@@ -208,7 +209,8 @@ public class InIceTriggerEndToEndTest
 
         final int runNum = 12345;
 
-        DAQTestUtil.startComponentIO(null, null, null, comp, null, runNum);
+        DAQTestUtil.startComponentIO(null, null, null, comp, null, runNum,
+                                     IComponent.DOMMODE_NORMAL);
 
         ActivityMonitor activity =
             new ActivityMonitor(comp, null, null, null);

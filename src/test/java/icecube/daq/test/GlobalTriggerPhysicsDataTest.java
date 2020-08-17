@@ -5,6 +5,7 @@ import icecube.daq.payload.IEventPayload;
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.juggler.component.DAQCompException;
+import icecube.daq.juggler.component.IComponent;
 import icecube.daq.payload.TriggerRegistry;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ISourceID;
@@ -258,7 +259,8 @@ public class GlobalTriggerPhysicsDataTest
 
         final int runNum = 12345;
 
-        DAQTestUtil.startComponentIO(null, comp, null, null, null, runNum);
+        DAQTestUtil.startComponentIO(null, comp, null, null, null, runNum,
+                                     IComponent.DOMMODE_NORMAL);
 
         PayloadProducer[] prod = new PayloadProducer[numTails];
 

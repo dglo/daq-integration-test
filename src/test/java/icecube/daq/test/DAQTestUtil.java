@@ -525,30 +525,30 @@ public final class DAQTestUtil
                                         IcetopTriggerComponent itComp,
                                         IniceTriggerComponent iiComp,
                                         StringHubComponent[] shComps,
-                                        int runNumber)
+                                        int runNumber, int domMode)
         throws DAQCompException, IOException
     {
         ArrayList<DAQComponentIOProcess> procList =
             new ArrayList<DAQComponentIOProcess>();
 
         if (ebComp != null) {
-            ebComp.starting(runNumber);
+            ebComp.starting(runNumber, domMode);
             procList.add(ebComp.getTriggerReader());
             procList.add(ebComp.getRequestWriter());
             procList.add(ebComp.getDataReader());
         }
         if (gtComp != null) {
-            gtComp.starting(runNumber);
+            gtComp.starting(runNumber, domMode);
             procList.add(gtComp.getReader());
             procList.add(gtComp.getWriter());
         }
         if (itComp != null) {
-            itComp.starting(runNumber);
+            itComp.starting(runNumber, domMode);
             procList.add(itComp.getReader());
             procList.add(itComp.getWriter());
         }
         if (iiComp != null) {
-            iiComp.starting(runNumber);
+            iiComp.starting(runNumber, domMode);
             procList.add(iiComp.getReader());
             procList.add(iiComp.getWriter());
         }
@@ -557,6 +557,7 @@ public final class DAQTestUtil
                 // starting hubs involves hardware initialization
                 // so do the bare minimum needed to init Sender
                 shComps[i].setRunNumber(runNumber);
+                shComps[i].setDOMMode(domMode);
                 shComps[i].getSender().startup();
                 procList.add(shComps[i].getHitWriter());
                 procList.add(shComps[i].getRequestReader());

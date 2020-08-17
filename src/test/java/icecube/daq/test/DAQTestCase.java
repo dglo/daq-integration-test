@@ -577,7 +577,7 @@ public abstract class DAQTestCase
             connectHubsAndEB(shComps, itComp, iiComp, ebComp, validator);
 
         DAQTestUtil.startComponentIO(ebComp, gtComp, itComp, iiComp, shComps,
-                                     RUN_NUMBER);
+                                     RUN_NUMBER, IComponent.DOMMODE_NORMAL);
 
         // start sending input data
         sendData(shComps);
